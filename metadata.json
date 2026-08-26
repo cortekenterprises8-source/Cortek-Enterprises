@@ -1,0 +1,6 @@
+{
+  "name": "CORTEK ENTERPRISES",
+  "description": "Live online pre-owned gadget catalog and transparency platform for CORTEK ENTERPRISES in Karol Bagh, New Delhi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
