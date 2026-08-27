@@ -32,8 +32,8 @@ export const CortekLogo: React.FC<CortekLogoProps> = ({
           <div
             className={`font-black uppercase tracking-[-0.02em] ${currentSize.main}`}
             style={{
-              color: '#d97706',
-              textShadow: '0 0 20px rgba(245, 158, 11, 0.8), 0 0 40px rgba(245, 158, 11, 0.5), 0 2px 4px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.2)',
+              color: '#0f172a',
+              textShadow: '0 2px 4px rgba(15, 23, 42, 0.16)',
               lineHeight: 1.1,
               letterSpacing: '-0.01em',
             }}
@@ -43,8 +43,8 @@ export const CortekLogo: React.FC<CortekLogoProps> = ({
           <div
             className={`font-black uppercase tracking-[0.05em] ${currentSize.main}`}
             style={{
-              color: '#d97706',
-              textShadow: '0 0 20px rgba(245, 158, 11, 0.8), 0 0 40px rgba(245, 158, 11, 0.5), 0 2px 4px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.2)',
+              color: '#059669',
+              textShadow: '0 2px 4px rgba(5, 150, 105, 0.16)',
               lineHeight: 1.1,
               marginTop: '-0.04em',
               letterSpacing: '0.05em',
@@ -57,9 +57,9 @@ export const CortekLogo: React.FC<CortekLogoProps> = ({
 
       {showSubtitle && (
         <p className={`${currentSize.sub} ${isDark ? 'text-slate-400' : 'text-slate-500'} font-medium flex items-center gap-1.5 mt-2.5`}>
-          <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-600 animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 animate-pulse" />
           <span className="text-slate-600 dark:text-slate-400">Direct Counter Stock</span>
-          <span className="text-amber-500 font-bold">•</span>
+          <span className="text-emerald-600 font-bold">•</span>
           <span className="text-slate-600 dark:text-slate-400">4.9★</span>
         </p>
       )}
