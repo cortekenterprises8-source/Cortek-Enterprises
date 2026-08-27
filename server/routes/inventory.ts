@@ -85,10 +85,7 @@ router.patch('/:id/status', authenticate, authorize('admin', 'sales'), validate(
     const result = await withTransaction(async (client) => {
       // Lock the row
       const { rows: current } = await client.query(
-        `SELECT * FROM inventory_units
-         WHERE id = $1 OR product_id = $1
-         ORDER BY CASE status WHEN 'available' THEN 0 WHEN 'reserved' THEN 1 ELSE 2 END
-         LIMIT 1 FOR UPDATE`,
+        'SELECT * FROM inventory_units WHERE id = $1 FOR UPDATE',
         [id]
       );
       if (current.length === 0) throw new Error('NOT_FOUND');
@@ -109,12 +106,10 @@ router.patch('/:id/status', authenticate, authorize('admin', 'sales'), validate(
         `UPDATE inventory_units SET status = $1, updated_at = now() WHERE id = $2 RETURNING *`,
         [status, id]
       );
+      await createAuditLog(req, 'INVENTORY_STATUS_CHANGED', 'inventory_unit', rows[0].id, {
+        from: unit.status, to: status,
+      }, client);
       return rows[0];
-    });
-
-    await createAuditLog(req, 'INVENTORY_STATUS_CHANGED', 'inventory_unit', result.id, {
-      from: result.status,
-      to: status,
     });
     res.json({ id: result.id, status: result.status });
   } catch (err: any) {
