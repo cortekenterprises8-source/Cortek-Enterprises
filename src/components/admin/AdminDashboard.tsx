@@ -26,6 +26,7 @@ import { PhoneItem, ConditionGrade, StockStatus, ProductCategory } from '../../t
 import { formatINR } from '../../config/siteConfig';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
+import { CustomerDetailsModal } from '../common/CustomerDetailsModal';
 
 export const AdminDashboard: React.FC = () => {
   const { logout } = useAuth();
@@ -48,6 +49,7 @@ export const AdminDashboard: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'All' | 'Available' | 'Booked' | 'Sold Out'>('All');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingPhone, setEditingPhone] = useState<PhoneItem | null>(null);
+  const [customerAction, setCustomerAction] = useState<{ item: PhoneItem; action: 'reserve' | 'sell' } | null>(null);
 
   // Form State with optional MRP and Bill Amount
   const [formData, setFormData] = useState({
@@ -87,6 +89,19 @@ export const AdminDashboard: React.FC = () => {
   const showToast = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 3000);
+  };
+
+  const submitCustomerAction = async (name: string, phone: string) => {
+    if (!customerAction?.item.inventoryUnitId) throw new Error('This product has no physical inventory unit.');
+    if (customerAction.action === 'reserve') {
+      await reservePhone(customerAction.item.inventoryUnitId, name, phone, 120);
+      showToast(`Reserved ${customerAction.item.model} successfully`);
+    } else {
+      await sellPhone(customerAction.item.inventoryUnitId, name, phone, customerAction.item.price);
+      showToast(`Sold ${customerAction.item.model} successfully`);
+    }
+    setShowAddModal(false);
+    setCustomerAction(null);
   };
 
   // Financial & Operational Metrics for Admin
@@ -604,18 +619,7 @@ export const AdminDashboard: React.FC = () => {
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
                           {item.status === 'Available' && item.inventoryUnitId && (
                             <button
-                              onClick={() => {
-                                const name = window.prompt('Customer name for reservation');
-                                if (!name) return;
-                                const phone = window.prompt('Customer WhatsApp/mobile number');
-                                if (!phone || phone.replace(/\D/g, '').length < 10) {
-                                  showToast('A valid customer phone number is required for reservation.');
-                                  return;
-                                }
-                                reservePhone(item.inventoryUnitId!, name.trim(), phone.replace(/\D/g, ''), 120)
-                                  .then(() => showToast(`Reserved ${item.model} successfully`))
-                                  .catch(error => showToast(`Reservation failed: ${error instanceof Error ? error.message : 'Operation failed'}`));
-                              }}
+                              onClick={() => setCustomerAction({ item, action: 'reserve' })}
                               className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white border border-amber-300 font-bold text-[11px] cursor-pointer transition-colors"
                             >
                               Reserve
@@ -635,18 +639,7 @@ export const AdminDashboard: React.FC = () => {
                           )}
                           {(item.status === 'Available' || item.status === 'Booked') && item.inventoryUnitId && (
                             <button
-                              onClick={() => {
-                                const name = window.prompt('Customer name for sale');
-                                if (!name) return;
-                                const phone = window.prompt('Customer WhatsApp/mobile number');
-                                if (!phone || phone.replace(/\D/g, '').length < 10) {
-                                  showToast('A valid customer phone number is required for sale.');
-                                  return;
-                                }
-                                sellPhone(item.inventoryUnitId!, name.trim(), phone.replace(/\D/g, ''), item.price)
-                                  .then(() => showToast(`Sold ${item.model} successfully`))
-                                  .catch(error => showToast(`Sale failed: ${error instanceof Error ? error.message : 'Operation failed'}`));
-                              }}
+                              onClick={() => setCustomerAction({ item, action: 'sell' })}
                               className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white border border-blue-500 font-bold text-[11px] cursor-pointer transition-colors"
                             >
                               Complete Sale
@@ -865,16 +858,7 @@ export const AdminDashboard: React.FC = () => {
                         <div className="flex flex-wrap gap-1.5">
                           {formData.status === 'Available' && (
                             <button type="button" onClick={() => {
-                              const name = window.prompt('Customer name for reservation');
-                              if (!name) return;
-                              const phone = window.prompt('Customer WhatsApp/mobile number');
-                              if (!phone || phone.replace(/\D/g, '').length < 10) {
-                                showToast('A valid customer phone number is required for reservation.');
-                                return;
-                              }
-                              reservePhone(editingPhone.inventoryUnitId!, name.trim(), phone.replace(/\D/g, ''), 120)
-                                .then(() => { setShowAddModal(false); showToast(`Reserved ${editingPhone.model} successfully`); })
-                                .catch(error => showToast(`Reservation failed: ${error instanceof Error ? error.message : 'Operation failed'}`));
+                              setCustomerAction({ item: editingPhone, action: 'reserve' });
                             }} className="px-2 py-1 rounded-md bg-amber-500 text-white font-bold text-[11px]">
                               Reserve
                             </button>
@@ -888,16 +872,7 @@ export const AdminDashboard: React.FC = () => {
                           )}
                           {(formData.status === 'Available' || formData.status === 'Booked') && (
                             <button type="button" onClick={() => {
-                              const name = window.prompt('Customer name for sale');
-                              if (!name) return;
-                              const phone = window.prompt('Customer WhatsApp/mobile number');
-                              if (!phone || phone.replace(/\D/g, '').length < 10) {
-                                showToast('A valid customer phone number is required for sale.');
-                                return;
-                              }
-                              sellPhone(editingPhone.inventoryUnitId!, name.trim(), phone.replace(/\D/g, ''), editingPhone.price)
-                                .then(() => { setShowAddModal(false); showToast(`Sold ${editingPhone.model} successfully`); })
-                                .catch(error => showToast(`Sale failed: ${error instanceof Error ? error.message : 'Operation failed'}`));
+                              setCustomerAction({ item: editingPhone, action: 'sell' });
                             }} className="px-2 py-1 rounded-md bg-blue-600 text-white font-bold text-[11px]">
                               Complete Sale
                             </button>
@@ -1104,6 +1079,15 @@ export const AdminDashboard: React.FC = () => {
 
             </div>
           </div>
+        )}
+
+        {customerAction && (
+          <CustomerDetailsModal
+            action={customerAction.action}
+            productName={`${customerAction.item.brand} ${customerAction.item.model}`}
+            onClose={() => setCustomerAction(null)}
+            onSubmit={submitCustomerAction}
+          />
         )}
 
       </div>

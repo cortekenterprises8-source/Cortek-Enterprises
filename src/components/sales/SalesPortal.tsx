@@ -23,6 +23,7 @@ import { PhoneItem, ConditionGrade, StockStatus, ProductCategory, ApiReservation
 import { formatINR, SITE_CONFIG } from '../../config/siteConfig';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
+import { CustomerDetailsModal } from '../common/CustomerDetailsModal';
 
 export const SalesPortal: React.FC = () => {
   const { logout } = useAuth();
@@ -42,6 +43,7 @@ export const SalesPortal: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'All' | 'Available' | 'Booked' | 'Sold Out'>('All');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState<PhoneItem | null>(null);
+  const [customerAction, setCustomerAction] = useState<{ item: PhoneItem; action: 'reserve' | 'sell' } | null>(null);
   
   // Quick Quotation Modal
   const [quotationItem, setQuotationItem] = useState<PhoneItem | null>(null);
@@ -337,8 +339,8 @@ export const SalesPortal: React.FC = () => {
   };
 
   const handleReserve = async (item: PhoneItem) => {
-    if (!item.inventoryUnitId || !customerName.trim() || customerPhone.replace(/\D/g, '').length < 10) {
-      showToast('Customer name, phone, and a physical inventory unit are required.');
+    if (!item.inventoryUnitId) {
+      showToast('This product has no physical inventory unit.');
       return;
     }
     setWorkflowBusy(true);
@@ -355,8 +357,8 @@ export const SalesPortal: React.FC = () => {
   };
 
   const handleSell = async (item: PhoneItem) => {
-    if (!item.inventoryUnitId || !customerName.trim() || customerPhone.replace(/\D/g, '').length < 10) {
-      showToast('Customer name, phone, and a physical inventory unit are required.');
+    if (!item.inventoryUnitId) {
+      showToast('This product has no physical inventory unit.');
       return;
     }
     setWorkflowBusy(true);
@@ -378,6 +380,24 @@ export const SalesPortal: React.FC = () => {
     } finally {
       setWorkflowBusy(false);
     }
+  };
+
+  const submitCustomerAction = async (name: string, phone: string) => {
+    if (!customerAction?.item.inventoryUnitId) throw new Error('This product has no physical inventory unit.');
+    if (customerAction.action === 'reserve') {
+      await reservePhone(customerAction.item.inventoryUnitId, name, phone, 120);
+      showToast(`Reserved ${customerAction.item.model} successfully`);
+    } else {
+      let reservationId: string | undefined;
+      if (customerAction.item.status === 'Booked') {
+        const reservations = await api.get<ApiReservation[]>('/api/reservations');
+        reservationId = reservations.find(candidate => candidate.inventoryUnitId === customerAction.item.inventoryUnitId && ['pending', 'active'].includes(candidate.status))?.id;
+      }
+      await sellPhone(customerAction.item.inventoryUnitId, name, phone, customerAction.item.price, 0, reservationId);
+      showToast(`Sold ${customerAction.item.model} successfully`);
+    }
+    await refreshPhones();
+    setCustomerAction(null);
   };
 
   const handleCancelReservation = async (item: PhoneItem) => {
@@ -643,24 +663,7 @@ export const SalesPortal: React.FC = () => {
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
                           {item.status === 'Available' && (
                             <button
-                              onClick={() => {
-                                const name = window.prompt('Customer name for reservation');
-                                if (!name) return;
-                                const phone = window.prompt('Customer WhatsApp/mobile number');
-                                if (!phone || phone.replace(/\D/g, '').length < 10) {
-                                  showToast('A valid customer phone number is required for reservation.');
-                                  return;
-                                }
-                                if (!item.inventoryUnitId) {
-                                  showToast('This product has no physical inventory unit.');
-                                  return;
-                                }
-                                setWorkflowBusy(true);
-                                reservePhone(item.inventoryUnitId, name.trim(), phone.replace(/\D/g, ''), 120)
-                                  .then(() => { showToast(`Reserved ${item.model} successfully`); return refreshPhones(); })
-                                  .catch(error => showToast(`Reservation failed: ${error instanceof Error ? error.message : 'Operation failed'}`))
-                                  .finally(() => setWorkflowBusy(false));
-                              }}
+                              onClick={() => setCustomerAction({ item, action: 'reserve' })}
                               className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white border border-amber-300 font-bold text-[11px] cursor-pointer transition-colors"
                               title="Reserve"
                             >
@@ -685,38 +688,7 @@ export const SalesPortal: React.FC = () => {
                           )}
                           {(item.status === 'Available' || item.status === 'Booked') && (
                             <button
-                              onClick={() => {
-                                const name = window.prompt('Customer name for sale');
-                                if (!name) return;
-                                const phone = window.prompt('Customer WhatsApp/mobile number');
-                                if (!phone || phone.replace(/\D/g, '').length < 10) {
-                                  showToast('A valid customer phone number is required for sale.');
-                                  return;
-                                }
-                                if (!item.inventoryUnitId) {
-                                  showToast('This product has no physical inventory unit.');
-                                  return;
-                                }
-                                let reservationId: string | undefined;
-                                if (item.status === 'Booked') {
-                                  void api.get<ApiReservation[]>('/api/reservations').then(reservations => {
-                                    reservationId = reservations.find(candidate =>
-                                      candidate.inventoryUnitId === item.inventoryUnitId && ['pending', 'active'].includes(candidate.status)
-                                    )?.id;
-                                    return sellPhone(item.inventoryUnitId!, name.trim(), phone.replace(/\D/g, ''), item.price, 0, reservationId);
-                                  }).then(() => {
-                                    showToast(`Sold ${item.model} successfully`);
-                                    return refreshPhones();
-                                  }).catch(error => showToast(`Sale failed: ${error instanceof Error ? error.message : 'Operation failed'}`))
-                                    .finally(() => setWorkflowBusy(false));
-                                  return;
-                                }
-                                setWorkflowBusy(true);
-                                sellPhone(item.inventoryUnitId, name.trim(), phone.replace(/\D/g, ''), item.price, 0)
-                                  .then(() => { showToast(`Sold ${item.model} successfully`); return refreshPhones(); })
-                                  .catch(error => showToast(`Sale failed: ${error instanceof Error ? error.message : 'Operation failed'}`))
-                                  .finally(() => setWorkflowBusy(false));
-                              }}
+                              onClick={() => setCustomerAction({ item, action: 'sell' })}
                               className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white border border-blue-500 font-bold text-[11px] cursor-pointer transition-colors"
                               title="Complete Sale"
                             >
@@ -1227,6 +1199,15 @@ export const SalesPortal: React.FC = () => {
 
             </div>
           </div>
+        )}
+
+        {customerAction && (
+          <CustomerDetailsModal
+            action={customerAction.action}
+            productName={`${customerAction.item.brand} ${customerAction.item.model}`}
+            onClose={() => setCustomerAction(null)}
+            onSubmit={submitCustomerAction}
+          />
         )}
 
       </div>
