@@ -19,7 +19,7 @@ import {
   Upload
 } from 'lucide-react';
 import { useInventory } from '../../context/InventoryContext';
-import { PhoneItem, ConditionGrade, StockStatus, ProductCategory } from '../../types';
+import { PhoneItem, ConditionGrade, StockStatus, ProductCategory, ApiReservation } from '../../types';
 import { formatINR, SITE_CONFIG } from '../../config/siteConfig';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
@@ -31,6 +31,7 @@ export const SalesPortal: React.FC = () => {
     addPhone, 
     updatePhone, 
     setActiveView,
+    refreshPhones,
   } = useInventory();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,6 +46,7 @@ export const SalesPortal: React.FC = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [freeGiftNote, setFreeGiftNote] = useState('Free 9H Tempered Glass + In-Store Setup');
+  const [workflowBusy, setWorkflowBusy] = useState(false);
 
   // Form State with optional MRP and Bill Amount
   const [formData, setFormData] = useState({
@@ -307,7 +309,7 @@ export const SalesPortal: React.FC = () => {
     const message = `*CORTEK ENTERPRISES - SPECIAL COUNTER QUOTATION*\n` +
       `━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
       `Hello ${customerName || 'Valued Customer'},\n\n` +
-      `Here is the verified unit reserved for you at our Karol Bagh store:\n\n` +
+      `Here is the currently listed unit at our Karol Bagh store:\n\n` +
       `📱 *Device:* ${item.brand} ${item.model}\n` +
       `🏷️ *Category:* ${item.category || 'Phones'}\n` +
       `💾 *Storage:* ${item.storage} | *Colour:* ${item.colour}\n` +
@@ -329,6 +331,85 @@ export const SalesPortal: React.FC = () => {
     window.open(url, '_blank');
     setQuotationItem(null);
     showToast('WhatsApp Quotation generated!');
+  };
+
+  const handleReserve = async (item: PhoneItem) => {
+    if (!item.inventoryUnitId || !customerName.trim() || customerPhone.replace(/\D/g, '').length < 10) {
+      showToast('Customer name, phone, and a physical inventory unit are required.');
+      return;
+    }
+    setWorkflowBusy(true);
+    try {
+      await api.post('/api/reservations', {
+        inventoryUnitId: item.inventoryUnitId,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.replace(/\D/g, ''),
+        durationMinutes: 120,
+      });
+      await refreshPhones();
+      setQuotationItem(null);
+      showToast(`Reserved ${item.model} successfully`);
+    } catch (error) {
+      showToast(`Reservation failed: ${error instanceof Error ? error.message : 'Operation failed'}`);
+    } finally {
+      setWorkflowBusy(false);
+    }
+  };
+
+  const handleSell = async (item: PhoneItem) => {
+    if (!item.inventoryUnitId || !customerName.trim() || customerPhone.replace(/\D/g, '').length < 10) {
+      showToast('Customer name, phone, and a physical inventory unit are required.');
+      return;
+    }
+    setWorkflowBusy(true);
+    try {
+      let reservationId: string | undefined;
+      if (item.status === 'Booked') {
+        const reservations = await api.get<ApiReservation[]>('/api/reservations');
+        reservationId = reservations.find(reservation =>
+          reservation.inventoryUnitId === item.inventoryUnitId &&
+          ['pending', 'active'].includes(reservation.status)
+        )?.id;
+      }
+      await api.post('/api/sales', {
+        inventoryUnitId: item.inventoryUnitId,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.replace(/\D/g, ''),
+        salePriceInr: Math.max(0, item.price - discountAmount),
+        discountInr: discountAmount,
+        reservationId,
+      });
+      await refreshPhones();
+      setQuotationItem(null);
+      showToast(`Sold ${item.model} successfully`);
+    } catch (error) {
+      showToast(`Sale failed: ${error instanceof Error ? error.message : 'Operation failed'}`);
+    } finally {
+      setWorkflowBusy(false);
+    }
+  };
+
+  const handleCancelReservation = async (item: PhoneItem) => {
+    if (!item.inventoryUnitId) {
+      showToast('This product has no physical inventory unit.');
+      return;
+    }
+    setWorkflowBusy(true);
+    try {
+      const reservations = await api.get<ApiReservation[]>('/api/reservations');
+      const reservation = reservations.find(candidate =>
+        candidate.inventoryUnitId === item.inventoryUnitId && ['pending', 'active'].includes(candidate.status)
+      );
+      if (!reservation) throw new Error('No active reservation found for this unit.');
+      await api.post('/api/reservations/cancel', { reservationId: reservation.id, reason: 'Released at sales counter' });
+      await refreshPhones();
+      setQuotationItem(null);
+      showToast(`Released ${item.model} successfully`);
+    } catch (error) {
+      showToast(`Release failed: ${error instanceof Error ? error.message : 'Operation failed'}`);
+    } finally {
+      setWorkflowBusy(false);
+    }
   };
 
   return (
@@ -769,15 +850,7 @@ export const SalesPortal: React.FC = () => {
 
                   <div className="space-y-1.5">
                     <label className="font-bold text-slate-700">Stock Status</label>
-                    <select
-                      value={formData.status}
-                      onChange={e => setFormData({ ...formData, status: e.target.value as any })}
-                      className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
-                    >
-                      <option value="Available">Available</option>
-                      <option value="Sold Out">Sold Out</option>
-                      <option value="Reserved">Reserved</option>
-                    </select>
+                    <p className="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-sm">Managed by reservations and sales</p>
                   </div>
                 </div>
 
@@ -1023,6 +1096,30 @@ export const SalesPortal: React.FC = () => {
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
+                  disabled={workflowBusy || quotationItem.status !== 'Booked'}
+                  onClick={() => handleCancelReservation(quotationItem)}
+                  className="px-4 py-2 rounded-xl bg-slate-600 hover:bg-slate-700 disabled:bg-slate-300 text-white font-bold cursor-pointer"
+                >
+                  {workflowBusy ? 'Saving...' : 'Release Hold'}
+                </button>
+                <button
+                  type="button"
+                  disabled={workflowBusy || quotationItem.status !== 'Available'}
+                  onClick={() => handleReserve(quotationItem)}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 text-white font-bold cursor-pointer"
+                >
+                  {workflowBusy ? 'Saving...' : 'Reserve Unit'}
+                </button>
+                <button
+                  type="button"
+                  disabled={workflowBusy || quotationItem.status === 'Sold Out' || quotationItem.status === 'Retired'}
+                  onClick={() => handleSell(quotationItem)}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-bold cursor-pointer"
+                >
+                  {workflowBusy ? 'Saving...' : 'Complete Sale'}
+                </button>
+                <button
+                  type="button"
                   onClick={() => setQuotationItem(null)}
                   className="px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 font-semibold cursor-pointer"
                 >
@@ -1030,6 +1127,7 @@ export const SalesPortal: React.FC = () => {
                 </button>
                 <button
                   type="button"
+                  disabled={workflowBusy}
                   onClick={() => handleSendWhatsAppQuotation(quotationItem)}
                   className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-2 shadow-xs cursor-pointer"
                 >

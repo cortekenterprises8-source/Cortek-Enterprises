@@ -107,7 +107,7 @@ router.post('/', authenticate, authorize('admin', 'sales'), validate(createSaleS
         [inventoryUnitId]
       );
 
-      await createAuditLog(req, 'SALE_RECORDED', 'sale', saleRows[0].id, {
+      await createAuditLog(req, 'SALE_CREATED', 'sale', saleRows[0].id, {
         inventoryUnitId, salePriceInr,
       }, client);
 

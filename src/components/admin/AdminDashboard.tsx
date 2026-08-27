@@ -791,15 +791,7 @@ export const AdminDashboard: React.FC = () => {
 
                   <div className="space-y-1.5">
                     <label className="font-bold text-slate-700">Stock Status</label>
-                    <select
-                      value={formData.status}
-                      onChange={e => setFormData({ ...formData, status: e.target.value as any })}
-                      className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
-                    >
-                      <option value="Available">Available</option>
-                      <option value="Booked">Booked</option>
-                      <option value="Sold Out">Sold Out</option>
-                    </select>
+                    <p className="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-sm">Managed by reservations and sales</p>
                   </div>
                 </div>
 

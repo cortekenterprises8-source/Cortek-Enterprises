@@ -12,6 +12,7 @@ const expectedIndexes = [
   'idx_product_images_product', 'idx_customers_phone', 'one_active_reservation_per_unit',
   'idx_reservations_expiry', 'idx_reservations_unit', 'idx_sales_customer', 'idx_sales_seller',
   'idx_inspections_unit', 'idx_verifications_imei', 'idx_audit_logs_entity', 'idx_audit_logs_created',
+  'idx_customers_phone_unique',
 ];
 
 export async function verifySchema(connection: Pool | PoolClient) {

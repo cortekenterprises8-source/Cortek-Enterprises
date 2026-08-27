@@ -156,40 +156,63 @@ export interface ApiInventoryUnit {
 
 export interface ApiReservation {
   id: string;
-  unit_id: string;
-  customer_id: string;
-  status: 'pending' | 'active' | 'cancelled' | 'expired' | 'converted_to_sale';
-  deposit_amount_inr: number;
-  total_amount_inr: number;
+  inventoryUnitId: string;
+  customerId: string;
+  status: 'pending' | 'active' | 'cancelled' | 'expired' | 'converted';
+  customerName: string;
+  customerPhone: string;
+  stockTag: string;
+  brand: string;
+  model: string;
+  storage: string;
   notes: string | null;
-  expires_at: string;
-  created_at: string;
-  updated_at: string;
+  expiresAt: string;
+  createdAt: string;
 }
 
 export interface ApiSale {
   id: string;
-  unit_id: string;
-  reservation_id: string | null;
-  customer_id: string;
-  sale_price_inr: number;
-  discount_inr: number;
-  final_amount_inr: number;
-  payment_method: string;
-  invoice_number: string | null;
+  inventoryUnitId: string;
+  customerName: string;
+  customerPhone: string;
+  sellerName: string;
+  brand: string;
+  model: string;
+  storage: string;
+  colour: string;
+  stockTag: string;
+  salePriceInr: number;
+  discountInr: number;
   notes: string | null;
-  sold_by: string;
-  created_at: string;
+  soldAt: string;
 }
 
 export interface ApiInspection {
   id: string;
-  unit_id: string;
-  inspector_name: string;
-  passed_checks: string[];
-  failed_checks: string[];
-  notes: string | null;
-  created_at: string;
+  inventoryUnitId: string;
+  stockTag: string;
+  brand: string;
+  model: string;
+  inspectorName: string;
+  displayOk: boolean;
+  touchOk: boolean;
+  batteryOk: boolean;
+  camerasOk: boolean;
+  speakersOk: boolean;
+  microphoneOk: boolean;
+  chargingOk: boolean;
+  biometricOk: boolean;
+  trueToneOk: boolean | null;
+  sensorsOk: boolean;
+  buttonsOk: boolean;
+  networkOk: boolean;
+  wifiOk: boolean;
+  bluetoothOk: boolean;
+  physicalCondition: string;
+  replacedParts: string;
+  technicianNotes: string;
+  overallPass: boolean;
+  createdAt: string;
 }
 
 export interface ApiCustomer {
@@ -198,5 +221,5 @@ export interface ApiCustomer {
   phone: string;
   email: string | null;
   notes: string | null;
-  created_at: string;
+  createdAt: string;
 }

@@ -150,10 +150,11 @@ router.delete('/:id', authenticate, authorize('admin'), async (req: Request, res
         `UPDATE inventory_units SET status = 'retired', updated_at = now() WHERE id = $1 RETURNING *`,
         [id]
       );
+      await createAuditLog(req, 'INVENTORY_STATUS_CHANGED', 'inventory_unit', id, {
+        from: unit.status, to: 'retired',
+      }, client);
       return rows[0];
     });
-
-    await createAuditLog(req, 'INVENTORY_DEACTIVATED', 'inventory_unit', id, { from: result.status });
     res.json({ message: 'Inventory unit deactivated.', status: result.status });
   } catch (err: any) {
     if (err.message === 'NOT_FOUND') return res.status(404).json({ error: 'Inventory unit not found.' });
