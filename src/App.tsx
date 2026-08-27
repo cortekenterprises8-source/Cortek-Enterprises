@@ -17,8 +17,18 @@ import { LocationSection } from './components/home/LocationSection';
 import { SafetyChecks } from './components/home/SafetyChecks';
 import { LoginPage } from './components/auth/LoginPage';
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+const Forbidden: React.FC = () => (
+  <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+    <div className="max-w-md text-center space-y-3">
+      <h1 className="text-2xl font-black text-slate-900">Access Forbidden</h1>
+      <p className="text-sm text-slate-600">Your staff account does not have access to this portal.</p>
+      <button onClick={() => window.location.assign('/')} className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold">Return to storefront</button>
+    </div>
+  </div>
+);
+
+const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole: 'admin' | 'sales' }> = ({ children, requiredRole }) => {
+  const { isAuthenticated, isAdmin, isSales, loading } = useAuth();
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -30,7 +40,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     );
   }
   if (!isAuthenticated) {
+    sessionStorage.setItem('cortek_login_redirect', window.location.pathname);
     return <LoginPage />;
+  }
+  if ((requiredRole === 'admin' && !isAdmin) || (requiredRole === 'sales' && !isSales)) {
+    return <Forbidden />;
   }
   return <>{children}</>;
 };
@@ -46,6 +60,13 @@ const AppContent: React.FC = () => {
   } = useInventory();
   const { isAuthenticated } = useAuth();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [pathname, setPathname] = useState(window.location.pathname);
+
+  React.useEffect(() => {
+    const handlePopState = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const currentDetailPhone = selectedPhone || (activeDetailId ? getPhoneById(activeDetailId) : null);
 
@@ -60,28 +81,20 @@ const AppContent: React.FC = () => {
     }
 
     // Protected routes require authentication
-    if (activeView === 'sales') {
+    if (pathname === '/sales') {
       return (
-        <ProtectedRoute>
+        <ProtectedRoute requiredRole="sales">
           <SalesPortal />
         </ProtectedRoute>
       );
     }
 
-    if (activeView === 'admin') {
+    if (pathname === '/admin') {
       return (
-        <ProtectedRoute>
+        <ProtectedRoute requiredRole="admin">
           <AdminDashboard />
         </ProtectedRoute>
       );
-    }
-
-    // Handle hash-based admin/sales redirects
-    if (window.location.hash === '#/admin' && !isAuthenticated) {
-      return <ProtectedRoute><div /></ProtectedRoute>;
-    }
-    if (window.location.hash === '#/sales' && !isAuthenticated) {
-      return <ProtectedRoute><div /></ProtectedRoute>;
     }
 
     switch (activeView) {

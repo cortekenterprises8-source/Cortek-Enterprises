@@ -21,8 +21,10 @@ import {
 import { useInventory } from '../../context/InventoryContext';
 import { PhoneItem, ConditionGrade, StockStatus, ProductCategory } from '../../types';
 import { formatINR, SITE_CONFIG } from '../../config/siteConfig';
+import { useAuth } from '../../context/AuthContext';
 
 export const SalesPortal: React.FC = () => {
+  const { logout } = useAuth();
   const { 
     phones, 
     addPhone, 
@@ -370,6 +372,10 @@ export const SalesPortal: React.FC = () => {
             >
               <Plus className="w-4 h-4" />
               <span>Add New Item</span>
+            </button>
+
+            <button onClick={logout} className="px-3.5 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold cursor-pointer">
+              Sign Out
             </button>
 
             <button

@@ -14,6 +14,9 @@ export const LoginPage: React.FC = () => {
     setSubmitting(true);
     try {
       await login(email, password);
+      const destination = sessionStorage.getItem('cortek_login_redirect');
+      sessionStorage.removeItem('cortek_login_redirect');
+      window.location.assign(destination === '/admin' || destination === '/sales' ? destination : '/');
     } catch {
       // error handled by context
     } finally {

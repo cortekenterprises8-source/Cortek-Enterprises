@@ -182,7 +182,22 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   useEffect(() => {
     const handleHashChange = () => {
+      const pathname = window.location.pathname.replace(/^\/+|\/+$/g, '');
       const hash = window.location.hash.replace('#/', '').replace('#', '');
+      if (!hash && pathname) {
+        setUserRole('customer');
+        if (pathname.startsWith('stock/')) {
+          const id = pathname.replace('stock/', '');
+          setActiveViewState('detail');
+          setActiveDetailId(id);
+          const match = phones.find(p => p.id === id);
+          if (match) setSelectedPhone(match);
+        } else if (['stock', 'accessories', 'education', 'safety', 'contact'].includes(pathname)) {
+          setActiveViewState(pathname === 'education' ? 'education' : pathname);
+          setActiveDetailId(null);
+        }
+        return;
+      }
       if (!hash || hash === '' || hash === 'home') {
         setUserRole('customer');
         setActiveViewState('home');

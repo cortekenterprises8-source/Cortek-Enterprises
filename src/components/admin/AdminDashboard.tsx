@@ -25,8 +25,10 @@ import {
 import { useInventory } from '../../context/InventoryContext';
 import { PhoneItem, ConditionGrade, StockStatus, ProductCategory } from '../../types';
 import { formatINR } from '../../config/siteConfig';
+import { useAuth } from '../../context/AuthContext';
 
 export const AdminDashboard: React.FC = () => {
+  const { logout } = useAuth();
   const { 
     phones, 
     addPhone, 
@@ -379,13 +381,16 @@ export const AdminDashboard: React.FC = () => {
             {/* Switch Mode Buttons */}
             <button
               onClick={() => {
-                setUserRole('sales');
-                setActiveView('sales');
+                window.location.assign('/sales');
               }}
               className="px-3.5 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <UserCheck className="w-4 h-4 text-blue-600" />
               <span>Sales View</span>
+            </button>
+
+            <button onClick={logout} className="px-3.5 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold cursor-pointer">
+              Sign Out
             </button>
 
             <button

@@ -49,6 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = useCallback(() => {
     api.setToken(null);
     setUser(null);
+    window.location.assign('/');
   }, []);
 
   return (
