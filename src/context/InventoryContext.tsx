@@ -114,7 +114,7 @@ function mapApiProductToPhoneItem(apiProduct: ApiProduct): PhoneItem {
 }
 
 function mapPhoneItemToApiPayload(phone: Omit<PhoneItem, 'id' | 'dateAdded'>) {
-  return {
+  const payload: Record<string, unknown> = {
     category: phone.category || 'Phones',
     brand: phone.brand,
     model: phone.model,
@@ -129,8 +129,6 @@ function mapPhoneItemToApiPayload(phone: Omit<PhoneItem, 'id' | 'dateAdded'>) {
     conditionDescription: phone.conditionDescription,
     batteryHealth: phone.batteryHealth || undefined,
     screenSize: phone.screenSize || undefined,
-    ram: phone.ram || null,
-    processor: phone.processor || null,
     stockTag: phone.stockTag || `CK-${Date.now().toString().slice(-6)}`,
     priceDrop: phone.priceDrop ?? false,
     featured: phone.featured ?? false,
@@ -138,6 +136,14 @@ function mapPhoneItemToApiPayload(phone: Omit<PhoneItem, 'id' | 'dateAdded'>) {
     keyFeatures: phone.keyFeatures || [],
     images: phone.images.map((url, index) => ({ url, altText: `${phone.brand} ${phone.model}`, sortOrder: index, isPrimary: index === 0 })),
   };
+
+  // Only include optional string fields if they have truthy values (avoid sending null for optional strings)
+  if (phone.ram) payload.ram = phone.ram;
+  if (phone.processor) payload.processor = phone.processor;
+  if (phone.ram === '') payload.ram = undefined;
+  if (phone.processor === '') payload.processor = undefined;
+
+  return payload;
 }
 
 export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
