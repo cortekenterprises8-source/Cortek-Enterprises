@@ -73,7 +73,7 @@ const emptyInventoryContext: InventoryContextType = {
 };
 
 function mapApiProductToPhoneItem(apiProduct: any): PhoneItem {
-  const images = apiProduct.images?.map((img: any) => img.url) || [];
+  const images = apiProduct.images?.map((img: any) => typeof img === 'string' ? img : img.url).filter(Boolean) || [];
   const unit = apiProduct.units?.[0];
   const statusMap: Record<string, PhoneItem['status']> = {
     available: 'Available',
@@ -81,7 +81,7 @@ function mapApiProductToPhoneItem(apiProduct: any): PhoneItem {
     sold: 'Sold Out',
     retired: 'Sold Out',
   };
-  const inBox = apiProduct.in_box || {};
+  const inBox = apiProduct.inBox || apiProduct.in_box || {};
   return {
     id: apiProduct.id,
     category: apiProduct.category || 'Phones',
@@ -89,18 +89,18 @@ function mapApiProductToPhoneItem(apiProduct: any): PhoneItem {
     model: apiProduct.model,
     storage: apiProduct.storage,
     colour: apiProduct.colour,
-    colorHex: apiProduct.color_hex,
-    condition: apiProduct.condition_grade,
-    conditionDescription: apiProduct.condition_description,
-    batteryHealth: apiProduct.battery_health,
-    price: apiProduct.price_inr,
-    originalMsp: apiProduct.original_msp,
-    billAvailable: apiProduct.bill_available,
-    billAmount: apiProduct.bill_amount,
-    priceDrop: apiProduct.price_drop,
+    colorHex: apiProduct.colorHex || apiProduct.color_hex,
+    condition: apiProduct.condition || apiProduct.condition_grade,
+    conditionDescription: apiProduct.conditionDescription || apiProduct.condition_description,
+    batteryHealth: apiProduct.batteryHealth ?? apiProduct.battery_health,
+    price: apiProduct.price ?? apiProduct.price_inr,
+    originalMsp: apiProduct.originalMsp ?? apiProduct.original_msp,
+    billAvailable: apiProduct.billAvailable ?? apiProduct.bill_available,
+    billAmount: apiProduct.billAmount ?? apiProduct.bill_amount,
+    priceDrop: apiProduct.priceDrop ?? apiProduct.price_drop,
     featured: apiProduct.featured,
-    status: statusMap[unit?.status] || 'Available',
-    dateAdded: apiProduct.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+    status: apiProduct.status || statusMap[unit?.status] || 'Available',
+    dateAdded: apiProduct.dateAdded || apiProduct.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
     images: images.length > 0 ? images : ['/placeholder-phone.png'],
     inBox: {
       chargerIncluded: inBox.charger_included ?? inBox.chargerIncluded ?? true,
@@ -110,9 +110,9 @@ function mapApiProductToPhoneItem(apiProduct: any): PhoneItem {
       originalBillIncluded: inBox.original_bill_included ?? inBox.originalBillIncluded,
     },
     keyFeatures: apiProduct.key_features || [],
-    inspectionPassed: apiProduct.inspection_passed || [],
-    stockTag: apiProduct.stock_tag,
-    screenSize: apiProduct.screen_size,
+    inspectionPassed: apiProduct.inspectionPassed || apiProduct.inspection_passed || [],
+    stockTag: apiProduct.stockTag || apiProduct.stock_tag,
+    screenSize: apiProduct.screenSize || apiProduct.screen_size,
     ram: apiProduct.ram,
     processor: apiProduct.processor,
   };
