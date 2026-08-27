@@ -1,8 +1,7 @@
 import 'dotenv/config';
 import crypto from 'node:crypto';
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import { pool, withTransaction } from './db';
+import { verifySchema } from './schemaVerification';
 
 function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString('hex');
@@ -10,25 +9,7 @@ function hashPassword(password: string): string {
   return `scrypt$${salt}$${digest}`;
 }
 
-// Apply migration
-const migrationSQL = await fs.readFile(path.resolve('db/migrations/001_initial.sql'), 'utf8');
-// Split on semicolons and execute each statement
-const statements = migrationSQL
-  .split(';')
-  .map(s => s.trim())
-  .filter(s => s.length > 0 && !s.startsWith('--'));
-
-for (const stmt of statements) {
-  try {
-    await pool.query(stmt);
-  } catch (err: any) {
-    // Ignore duplicate/already-exists errors
-    if (!err.message?.includes('already exists') && !err.message?.includes('duplicate')) {
-      console.error(`Migration statement failed: ${stmt.slice(0, 80)}...`, err.message);
-    }
-  }
-}
-console.log('Migration applied.');
+await verifySchema(pool);
 
 // Seed admin user
 const adminHash = hashPassword('admin12345678');

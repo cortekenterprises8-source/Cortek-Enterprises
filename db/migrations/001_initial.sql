@@ -4,13 +4,25 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- TYPES
 -- ============================================================
 
-CREATE TYPE user_role AS ENUM ('sales', 'admin');
+DO $$ BEGIN
+  CREATE TYPE user_role AS ENUM ('sales', 'admin');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE inventory_status AS ENUM ('available', 'reserved', 'sold', 'retired');
+DO $$ BEGIN
+  CREATE TYPE inventory_status AS ENUM ('available', 'reserved', 'sold', 'retired');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE reservation_status AS ENUM ('pending', 'active', 'expired', 'cancelled', 'converted');
+DO $$ BEGIN
+  CREATE TYPE reservation_status AS ENUM ('pending', 'active', 'expired', 'cancelled', 'converted');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE verification_status AS ENUM ('requested', 'pending', 'verified', 'failed', 'unavailable');
+DO $$ BEGIN
+  CREATE TYPE verification_status AS ENUM ('requested', 'pending', 'verified', 'failed', 'unavailable');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ============================================================
 -- USERS
@@ -218,10 +230,3 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);
 
--- ============================================================
--- SEED DEFAULT ADMIN USER (password: admin12345678)
--- ============================================================
-
-INSERT INTO users (email, password_hash, role, name) VALUES
-  ('admin@cortek.com', 'scrypt$' || encode(gen_salt('scrypt', 14, 8), 'hex') || '$placeholder', 'admin', 'Cortek Admin')
-ON CONFLICT (email) DO NOTHING;
