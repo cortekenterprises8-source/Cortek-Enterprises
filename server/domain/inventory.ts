@@ -8,5 +8,11 @@ export const validInventoryTransitions: Record<InventoryStatus, readonly Invento
 };
 
 export function canTransitionInventoryStatus(from: InventoryStatus, to: InventoryStatus) {
-  return validInventoryTransitions[from].includes(to);
+  return validInventoryTransitions[from]?.includes(to) ?? false;
+}
+
+export function assertInventoryTransition(from: InventoryStatus, to: InventoryStatus): void {
+  if (!canTransitionInventoryStatus(from, to)) {
+    throw new Error(`INVALID_TRANSITION: ${from} -> ${to}`);
+  }
 }

@@ -4,6 +4,7 @@ import { authenticate, authorize, getUser } from '../middleware/authenticate';
 import { validate } from '../middleware/validate';
 import { createAuditLog } from '../middleware/audit';
 import { createInventoryUnitSchema, updateInventoryStatusSchema } from '../schemas';
+import { assertInventoryTransition } from '../domain/inventory';
 
 const router = Router();
 
@@ -91,16 +92,8 @@ router.patch('/:id/status', authenticate, authorize('admin', 'sales'), validate(
       if (current.length === 0) throw new Error('NOT_FOUND');
       const unit = current[0];
 
-      // Validate status transition
-      const validTransitions: Record<string, string[]> = {
-        available: ['retired'],
-        reserved: [],
-        sold: [],
-        retired: [],
-      };
-      if (!validTransitions[unit.status]?.includes(status)) {
-        throw new Error(`INVALID_TRANSITION: ${unit.status} -> ${status}`);
-      }
+      // Validate status transition using the canonical domain rules.
+      assertInventoryTransition(unit.status, status);
 
       const { rows } = await client.query(
         `UPDATE inventory_units SET status = $1, updated_at = now() WHERE id = $2 RETURNING *`,
@@ -136,15 +129,7 @@ router.delete('/:id', authenticate, authorize('admin'), async (req: Request, res
       if (current.length === 0) throw new Error('NOT_FOUND');
       const unit = current[0];
 
-      const validTransitions: Record<string, string[]> = {
-        available: ['retired'],
-        reserved: [],
-        sold: [],
-        retired: [],
-      };
-      if (!validTransitions[unit.status]?.includes('retired')) {
-        throw new Error(`INVALID_TRANSITION: ${unit.status} -> retired`);
-      }
+      assertInventoryTransition(unit.status, 'retired');
 
       const { rows } = await client.query(
         `UPDATE inventory_units SET status = 'retired', updated_at = now() WHERE id = $1 RETURNING *`,

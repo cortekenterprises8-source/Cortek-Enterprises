@@ -19,6 +19,10 @@ interface InventoryContextType {
   addPhone: (phone: Omit<PhoneItem, 'id' | 'dateAdded'>) => Promise<void>;
   updatePhone: (phone: PhoneItem) => Promise<void>;
   deletePhone: (id: string) => Promise<void>;
+  reservePhone: (inventoryUnitId: string, customerName: string, customerPhone: string, durationMinutes?: number) => Promise<void>;
+  releasePhoneReservation: (inventoryUnitId: string) => Promise<void>;
+  sellPhone: (inventoryUnitId: string, customerName: string, customerPhone: string, salePriceInr: number, discountInr?: number, reservationId?: string) => Promise<void>;
+  retirePhone: (inventoryUnitId: string) => Promise<void>;
   resetToDefaultStock: () => void;
   getPhoneById: (id: string) => PhoneItem | undefined;
   refreshPhones: () => Promise<void>;
@@ -59,6 +63,10 @@ const emptyInventoryContext: InventoryContextType = {
   addPhone: async () => undefined,
   updatePhone: async () => undefined,
   deletePhone: async () => undefined,
+  reservePhone: async () => undefined,
+  releasePhoneReservation: async () => undefined,
+  sellPhone: async () => undefined,
+  retirePhone: async () => undefined,
   resetToDefaultStock: () => undefined,
   getPhoneById: () => undefined,
   refreshPhones: async () => undefined,
@@ -285,6 +293,53 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     await refreshPhones();
   }, [refreshPhones]);
 
+  const reservePhone = useCallback(async (inventoryUnitId: string, customerName: string, customerPhone: string, durationMinutes = 120) => {
+    await api.post('/api/reservations', {
+      inventoryUnitId,
+      customerName: customerName.trim(),
+      customerPhone: customerPhone.replace(/\D/g, ''),
+      durationMinutes,
+    });
+    await refreshPhones();
+  }, [refreshPhones]);
+
+  const releasePhoneReservation = useCallback(async (inventoryUnitId: string) => {
+    const reservations = await api.get<{ id: string; inventoryUnitId: string; status: string }[]>('/api/reservations');
+    const reservation = reservations.find(candidate =>
+      candidate.inventoryUnitId === inventoryUnitId && ['pending', 'active'].includes(candidate.status)
+    );
+    if (!reservation) throw new Error('No active reservation found for this unit.');
+    await api.post('/api/reservations/cancel', {
+      reservationId: reservation.id,
+      reason: 'Released from sales counter',
+    });
+    await refreshPhones();
+  }, [refreshPhones]);
+
+  const sellPhone = useCallback(async (
+    inventoryUnitId: string,
+    customerName: string,
+    customerPhone: string,
+    salePriceInr: number,
+    discountInr = 0,
+    reservationId?: string
+  ) => {
+    await api.post('/api/sales', {
+      inventoryUnitId,
+      customerName: customerName.trim(),
+      customerPhone: customerPhone.replace(/\D/g, ''),
+      salePriceInr,
+      discountInr,
+      reservationId,
+    });
+    await refreshPhones();
+  }, [refreshPhones]);
+
+  const retirePhone = useCallback(async (inventoryUnitId: string) => {
+    await api.del(`/api/inventory/${inventoryUnitId}`);
+    await refreshPhones();
+  }, [refreshPhones]);
+
   const resetToDefaultStock = () => {
     refreshPhones();
   };
@@ -316,6 +371,10 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         addPhone,
         updatePhone,
         deletePhone,
+        reservePhone,
+        releasePhoneReservation,
+        sellPhone,
+        retirePhone,
         resetToDefaultStock,
         getPhoneById,
         refreshPhones,

@@ -36,7 +36,11 @@ export const AdminDashboard: React.FC = () => {
     deletePhone, 
     resetToDefaultStock,
     setActiveView,
-    setFilters
+    setFilters,
+    reservePhone,
+    releasePhoneReservation,
+    sellPhone,
+    retirePhone,
   } = useInventory();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -597,7 +601,71 @@ export const AdminDashboard: React.FC = () => {
                       </td>
 
                       <td className="py-3 px-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {item.status === 'Available' && item.inventoryUnitId && (
+                            <button
+                              onClick={() => {
+                                const name = window.prompt('Customer name for reservation');
+                                if (!name) return;
+                                const phone = window.prompt('Customer WhatsApp/mobile number');
+                                if (!phone || phone.replace(/\D/g, '').length < 10) {
+                                  showToast('A valid customer phone number is required for reservation.');
+                                  return;
+                                }
+                                reservePhone(item.inventoryUnitId!, name.trim(), phone.replace(/\D/g, ''), 120)
+                                  .then(() => showToast(`Reserved ${item.model} successfully`))
+                                  .catch(error => showToast(`Reservation failed: ${error instanceof Error ? error.message : 'Operation failed'}`));
+                              }}
+                              className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white border border-amber-300 font-bold text-[11px] cursor-pointer transition-colors"
+                            >
+                              Reserve
+                            </button>
+                          )}
+                          {item.status === 'Booked' && item.inventoryUnitId && (
+                            <button
+                              onClick={() => {
+                                releasePhoneReservation(item.inventoryUnitId!)
+                                  .then(() => showToast(`Released ${item.model} successfully`))
+                                  .catch(error => showToast(`Release failed: ${error instanceof Error ? error.message : 'Operation failed'}`));
+                              }}
+                              className="px-2.5 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white border border-slate-500 font-bold text-[11px] cursor-pointer transition-colors"
+                            >
+                              Release Hold
+                            </button>
+                          )}
+                          {(item.status === 'Available' || item.status === 'Booked') && item.inventoryUnitId && (
+                            <button
+                              onClick={() => {
+                                const name = window.prompt('Customer name for sale');
+                                if (!name) return;
+                                const phone = window.prompt('Customer WhatsApp/mobile number');
+                                if (!phone || phone.replace(/\D/g, '').length < 10) {
+                                  showToast('A valid customer phone number is required for sale.');
+                                  return;
+                                }
+                                sellPhone(item.inventoryUnitId!, name.trim(), phone.replace(/\D/g, ''), item.price)
+                                  .then(() => showToast(`Sold ${item.model} successfully`))
+                                  .catch(error => showToast(`Sale failed: ${error instanceof Error ? error.message : 'Operation failed'}`));
+                              }}
+                              className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white border border-blue-500 font-bold text-[11px] cursor-pointer transition-colors"
+                            >
+                              Complete Sale
+                            </button>
+                          )}
+                          {item.status === 'Available' && item.inventoryUnitId && (
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Retire ${item.brand} ${item.model} from active stock?`)) {
+                                  retirePhone(item.inventoryUnitId!)
+                                    .then(() => showToast(`Retired ${item.model} successfully`))
+                                    .catch(error => showToast(`Retire failed: ${error instanceof Error ? error.message : 'Operation failed'}`));
+                                }
+                              }}
+                              className="px-2.5 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 border border-red-200 font-bold text-[11px] cursor-pointer transition-colors"
+                            >
+                              Retire
+                            </button>
+                          )}
                           <button
                             onClick={() => handleOpenEdit(item)}
                             className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
@@ -791,7 +859,52 @@ export const AdminDashboard: React.FC = () => {
 
                   <div className="space-y-1.5">
                     <label className="font-bold text-slate-700">Stock Status</label>
-                    <p className="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-sm">Managed by reservations and sales</p>
+                    <div className="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-sm space-y-2">
+                      <p className="font-semibold">{formData.status}</p>
+                      {editingPhone?.inventoryUnitId && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {formData.status === 'Available' && (
+                            <button type="button" onClick={() => {
+                              const name = window.prompt('Customer name for reservation');
+                              if (!name) return;
+                              const phone = window.prompt('Customer WhatsApp/mobile number');
+                              if (!phone || phone.replace(/\D/g, '').length < 10) {
+                                showToast('A valid customer phone number is required for reservation.');
+                                return;
+                              }
+                              reservePhone(editingPhone.inventoryUnitId!, name.trim(), phone.replace(/\D/g, ''), 120)
+                                .then(() => { setShowAddModal(false); showToast(`Reserved ${editingPhone.model} successfully`); })
+                                .catch(error => showToast(`Reservation failed: ${error instanceof Error ? error.message : 'Operation failed'}`));
+                            }} className="px-2 py-1 rounded-md bg-amber-500 text-white font-bold text-[11px]">
+                              Reserve
+                            </button>
+                          )}
+                          {formData.status === 'Booked' && (
+                            <button type="button" onClick={() => releasePhoneReservation(editingPhone.inventoryUnitId!)
+                              .then(() => { setShowAddModal(false); showToast(`Released ${editingPhone.model} successfully`); })
+                              .catch(error => showToast(`Release failed: ${error instanceof Error ? error.message : 'Operation failed'}`))} className="px-2 py-1 rounded-md bg-slate-600 text-white font-bold text-[11px]">
+                              Release Hold
+                            </button>
+                          )}
+                          {(formData.status === 'Available' || formData.status === 'Booked') && (
+                            <button type="button" onClick={() => {
+                              const name = window.prompt('Customer name for sale');
+                              if (!name) return;
+                              const phone = window.prompt('Customer WhatsApp/mobile number');
+                              if (!phone || phone.replace(/\D/g, '').length < 10) {
+                                showToast('A valid customer phone number is required for sale.');
+                                return;
+                              }
+                              sellPhone(editingPhone.inventoryUnitId!, name.trim(), phone.replace(/\D/g, ''), editingPhone.price)
+                                .then(() => { setShowAddModal(false); showToast(`Sold ${editingPhone.model} successfully`); })
+                                .catch(error => showToast(`Sale failed: ${error instanceof Error ? error.message : 'Operation failed'}`));
+                            }} className="px-2 py-1 rounded-md bg-blue-600 text-white font-bold text-[11px]">
+                              Complete Sale
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canTransitionInventoryStatus } from '../server/domain/inventory';
+import { canTransitionInventoryStatus, assertInventoryTransition } from '../server/domain/inventory';
 
 test('inventory lifecycle permits reservation, release, and sale transitions', () => {
   assert.equal(canTransitionInventoryStatus('available', 'reserved'), true);
@@ -13,4 +13,14 @@ test('sold and retired inventory are terminal states', () => {
   assert.equal(canTransitionInventoryStatus('sold', 'available'), false);
   assert.equal(canTransitionInventoryStatus('sold', 'reserved'), false);
   assert.equal(canTransitionInventoryStatus('retired', 'available'), false);
+});
+
+test('transition validator rejects invalid status changes and permits valid ones', () => {
+  assert.doesNotThrow(() => assertInventoryTransition('available', 'reserved'));
+  assert.doesNotThrow(() => assertInventoryTransition('reserved', 'available'));
+  assert.doesNotThrow(() => assertInventoryTransition('available', 'retired'));
+
+  assert.throws(() => assertInventoryTransition('available', 'available'));
+  assert.throws(() => assertInventoryTransition('reserved', 'retired'));
+  assert.throws(() => assertInventoryTransition('sold', 'available'));
 });
