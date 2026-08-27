@@ -42,6 +42,7 @@ export const AdminDashboard: React.FC = () => {
     releasePhoneReservation,
     sellPhone,
     retirePhone,
+    restorePhone,
   } = useInventory();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -623,6 +624,20 @@ export const AdminDashboard: React.FC = () => {
                               className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white border border-amber-300 font-bold text-[11px] cursor-pointer transition-colors"
                             >
                               Reserve
+                            </button>
+                          )}
+                          {(item.status === 'Sold Out' || item.status === 'Retired') && item.inventoryUnitId && (
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Restore ${item.brand} ${item.model} to available stock?`)) {
+                                  restorePhone(item.inventoryUnitId!)
+                                    .then(() => showToast(`Restored ${item.model} successfully`))
+                                    .catch(error => showToast(`Restore failed: ${error instanceof Error ? error.message : 'Operation failed'}`));
+                                }
+                              }}
+                              className="px-2.5 py-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-200 font-bold text-[11px] cursor-pointer transition-colors"
+                            >
+                              Restore Stock
                             </button>
                           )}
                           {item.status === 'Booked' && item.inventoryUnitId && (

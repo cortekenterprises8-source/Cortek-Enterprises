@@ -23,6 +23,7 @@ interface InventoryContextType {
   releasePhoneReservation: (inventoryUnitId: string) => Promise<void>;
   sellPhone: (inventoryUnitId: string, customerName: string, customerPhone: string, salePriceInr: number, discountInr?: number, reservationId?: string) => Promise<void>;
   retirePhone: (inventoryUnitId: string) => Promise<void>;
+  restorePhone: (inventoryUnitId: string) => Promise<void>;
   resetToDefaultStock: () => void;
   getPhoneById: (id: string) => PhoneItem | undefined;
   refreshPhones: () => Promise<void>;
@@ -67,6 +68,7 @@ const emptyInventoryContext: InventoryContextType = {
   releasePhoneReservation: async () => undefined,
   sellPhone: async () => undefined,
   retirePhone: async () => undefined,
+  restorePhone: async () => undefined,
   resetToDefaultStock: () => undefined,
   getPhoneById: () => undefined,
   refreshPhones: async () => undefined,
@@ -344,6 +346,11 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     await refreshPhones();
   }, [refreshPhones]);
 
+  const restorePhone = useCallback(async (inventoryUnitId: string) => {
+    await api.patch(`/api/inventory/${inventoryUnitId}/status`, { status: 'available' });
+    await refreshPhones();
+  }, [refreshPhones]);
+
   const resetToDefaultStock = () => {
     refreshPhones();
   };
@@ -379,6 +386,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         releasePhoneReservation,
         sellPhone,
         retirePhone,
+        restorePhone,
         resetToDefaultStock,
         getPhoneById,
         refreshPhones,

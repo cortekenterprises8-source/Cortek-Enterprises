@@ -9,10 +9,10 @@ test('inventory lifecycle permits reservation, release, and sale transitions', (
   assert.equal(canTransitionInventoryStatus('reserved', 'sold'), true);
 });
 
-test('sold and retired inventory are terminal states', () => {
-  assert.equal(canTransitionInventoryStatus('sold', 'available'), false);
+test('sold and retired inventory can be restored only to available', () => {
+  assert.equal(canTransitionInventoryStatus('sold', 'available'), true);
   assert.equal(canTransitionInventoryStatus('sold', 'reserved'), false);
-  assert.equal(canTransitionInventoryStatus('retired', 'available'), false);
+  assert.equal(canTransitionInventoryStatus('retired', 'available'), true);
 });
 
 test('transition validator rejects invalid status changes and permits valid ones', () => {
@@ -22,5 +22,5 @@ test('transition validator rejects invalid status changes and permits valid ones
 
   assert.throws(() => assertInventoryTransition('available', 'available'));
   assert.throws(() => assertInventoryTransition('reserved', 'retired'));
-  assert.throws(() => assertInventoryTransition('sold', 'available'));
+  assert.doesNotThrow(() => assertInventoryTransition('sold', 'available'));
 });

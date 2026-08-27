@@ -3,8 +3,8 @@ export type InventoryStatus = 'available' | 'reserved' | 'sold' | 'retired';
 export const validInventoryTransitions: Record<InventoryStatus, readonly InventoryStatus[]> = {
   available: ['reserved', 'sold', 'retired'],
   reserved: ['available', 'sold'],
-  sold: [],
-  retired: [],
+  sold: ['available'],
+  retired: ['available'],
 };
 
 export function canTransitionInventoryStatus(from: InventoryStatus, to: InventoryStatus) {

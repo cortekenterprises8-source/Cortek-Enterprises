@@ -78,7 +78,7 @@ router.post('/', authenticate, authorize('admin'), validate(createInventoryUnitS
 });
 
 // PATCH /api/inventory/:id/status - Status transition
-router.patch('/:id/status', authenticate, authorize('admin', 'sales'), validate(updateInventoryStatusSchema), async (req: Request, res: Response) => {
+router.patch('/:id/status', authenticate, authorize('admin'), validate(updateInventoryStatusSchema), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -94,6 +94,27 @@ router.patch('/:id/status', authenticate, authorize('admin', 'sales'), validate(
 
       // Validate status transition using the canonical domain rules.
       assertInventoryTransition(unit.status, status);
+
+      if (unit.status === 'sold' && status === 'available') {
+        const { rows: sales } = await client.query(
+          'SELECT id, sale_price_inr, sold_by FROM sales WHERE inventory_unit_id = $1 FOR UPDATE',
+          [id]
+        );
+        for (const sale of sales) {
+          await createAuditLog(req, 'SALE_REVERSED', 'sale', sale.id, {
+            inventoryUnitId: id,
+            salePriceInr: sale.sale_price_inr,
+            soldBy: sale.sold_by,
+            reason: 'Admin restored sold stock to available',
+          }, client);
+        }
+        await client.query('DELETE FROM sales WHERE inventory_unit_id = $1', [id]);
+        await client.query(
+          `UPDATE reservations SET status = 'cancelled', updated_at = now()
+           WHERE inventory_unit_id = $1 AND status = 'converted'`,
+          [id]
+        );
+      }
 
       const { rows } = await client.query(
         `UPDATE inventory_units SET status = $1, updated_at = now() WHERE id = $2 RETURNING *`,
