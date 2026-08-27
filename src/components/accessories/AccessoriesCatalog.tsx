@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Search 
 } from 'lucide-react';
-import { MOCK_ACCESSORIES } from '../../data/mockAccessories';
+import { STATIC_ACCESSORIES } from '../../data/staticAccessories';
 import { formatINR } from '../../config/siteConfig';
 import { WhatsAppButton } from '../common/WhatsAppButton';
 
@@ -20,7 +20,7 @@ export const AccessoriesCatalog: React.FC = () => {
     'Power Banks & Mounts'
   ];
 
-  const filteredAccessories = MOCK_ACCESSORIES.filter(item => {
+  const filteredAccessories = STATIC_ACCESSORIES.filter(item => {
     if (selectedCategory !== 'All' && item.category !== selectedCategory) {
       return false;
     }

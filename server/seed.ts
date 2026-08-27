@@ -34,11 +34,11 @@ await pool.query(
 );
 console.log('Users seeded: admin@cortek.com, sales@cortek.com');
 
-// Seed products from mock data
-const { INITIAL_PHONES } = await import('../src/data/mockPhones');
+// Load the initial catalog used to initialize PostgreSQL.
+const { SEED_PHONES } = await import('../src/data/seedPhones');
 
 await withTransaction(async (client) => {
-  for (const phone of INITIAL_PHONES) {
+  for (const phone of SEED_PHONES) {
     const { rows: productRows } = await client.query(
       `INSERT INTO products (category, brand, model, storage, colour, color_hex,
         price_inr, original_msp, bill_available, bill_amount, condition_grade,
@@ -84,5 +84,5 @@ await withTransaction(async (client) => {
   }
 });
 
-console.log(`Seeded ${INITIAL_PHONES.length} catalog records with inventory units and images.`);
+console.log(`Seeded ${SEED_PHONES.length} catalog records with inventory units and images.`);
 await pool.end();

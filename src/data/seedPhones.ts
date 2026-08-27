@@ -1,6 +1,6 @@
 import { PhoneItem } from '../types';
 
-export const INITIAL_PHONES: PhoneItem[] = [
+export const SEED_PHONES: PhoneItem[] = [
   // ==========================================
   // SMARTPHONES
   // ==========================================

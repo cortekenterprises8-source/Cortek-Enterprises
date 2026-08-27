@@ -8,7 +8,7 @@ import {
   ExternalLink,
   Shield
 } from 'lucide-react';
-import { BUYER_INSPECTION_CHECKLIST } from '../../data/mockVideos';
+import { BUYER_INSPECTION_CHECKLIST } from '../../data/staticContent';
 import { SITE_CONFIG } from '../../config/siteConfig';
 import { WhatsAppButton } from '../common/WhatsAppButton';
 

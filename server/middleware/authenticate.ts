@@ -16,6 +16,12 @@ export interface AuthenticatedRequest extends Request {
   user?: AuthUser;
 }
 
+declare global {
+  namespace Express {
+    interface Request { user?: AuthUser }
+  }
+}
+
 export async function authenticate(req: Request, res: Response, next: NextFunction) {
   const header = req.header('authorization');
   if (!header?.startsWith('Bearer ')) {

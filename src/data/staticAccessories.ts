@@ -1,6 +1,6 @@
 import { AccessoryItem } from '../types';
 
-export const MOCK_ACCESSORIES: AccessoryItem[] = [
+export const STATIC_ACCESSORIES: AccessoryItem[] = [
   {
     id: "acc-apple-20w-charger",
     name: "Apple 20W USB-C Power Adapter",

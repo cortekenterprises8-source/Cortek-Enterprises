@@ -3,3 +3,8 @@ dist
 .git
 .gitignore
 *.log
+docs
+tests
+assets
+.env*
+coverage

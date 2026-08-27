@@ -1,21 +1,35 @@
-# Cortek architecture
+# Cortek Enterprises Architecture
 
-## Current application
+## Overview
 
-Cortek is a Vite React application served by Express. The customer catalog, admin dashboard, and sales portal share one React cache backed by the PostgreSQL API. Seed fixtures are initialization data only; production inventory never falls back to mock data.
+Cortek Enterprises is a retail inventory and sales platform for pre-owned electronics. The React and TypeScript frontend is built with Vite and served by the Express application. Express also provides the JSON API and connects to PostgreSQL.
 
-## Target boundary
+## Application layers
 
-The PostgreSQL schema in `db/migrations/001_initial.sql` separates products from physical inventory units and models inspections, reservations, customers, sales, users, device verification requests, and audit logs. Inventory mutations must execute through API transactions; the browser must never be the source of truth.
+- React frontend: customer catalog, product details, static merchandising content, staff login, admin dashboard, and sales portal.
+- Express API: authentication, role authorization, product and inventory operations, customers, reservations, sales, inspections, uploads, and health checks.
+- PostgreSQL: the authoritative store for users, products, physical inventory units, customers, reservations, sales, inspections, images, and audit records.
 
-Products and physical inventory units have separate IDs. Reservation, sale, inspection, and status mutations must target the inventory-unit ID and be confirmed by the API before the client refreshes its cache. Privileged routes remain protected by server-side JWT/RBAC checks.
+## Domain model
 
-## Device verification
+Products represent catalog identity and may have multiple physical inventory units. Each inventory unit has its own ID, stock tag, IMEI, status, sale price, inspection summary, and lifecycle. Reservations and sales always reference an inventory-unit ID. Product images reference products and include URL, ordering, and primary-image metadata.
 
-IMEI input is a request for an internal record or configured provider result. The UI must not claim a device is genuine or factory verified when no provider result exists. `verification_status = unavailable` is the honest state when no provider is configured.
+Inventory statuses are `available`, `reserved`, `sold`, and `retired`. Customer-facing labels are Available, Booked, Sold Out, and Retired. Reservations and sales use database transactions and row locks for concurrency control.
+
+## Authentication and authorization
+
+Staff authenticate at `/login`. Passwords use the application scrypt format and JWTs authenticate API requests. Protected requests revalidate the user, role, and disabled state against PostgreSQL. Admin operations require the admin role; sales operations use the configured sales/admin permissions. The frontend does not determine authorization.
+
+## Images and storage
+
+Staff upload images through `POST /api/uploads/image`. The API stores the file and returns a URL used by product image records. The current provider is the server filesystem at `UPLOAD_DIR`; Railway deployments require a persistent volume or an object-storage provider for durable media.
+
+## Database operations
+
+`npm run db:migrate` applies the transactional schema migration and verifies required tables, types, indexes, and foreign keys before recording the migration version. `npm run db:seed` requires secure deployment-provided bootstrap passwords and inserts the initialization catalog from `src/data/seedPhones.ts` plus staff users. Accessories and educational material in `src/data/staticAccessories.ts` and `src/data/staticContent.ts` are static merchandising content, not inventory.
 
 ## Deployment
 
-The deployment uses the Docker Node process to serve the Vite output and API against managed PostgreSQL. Uploaded files currently use the local filesystem and require a persistent volume or object-storage provider in production; they must not be treated as durable media without that configuration.
+Railway builds the Docker image with Node 22, runs `npm run build`, and starts Express with `npm run server:start`. Express serves the Vite output and keeps `/api/*` responses as JSON. Required deployment variables include `DATABASE_URL`, `DATABASE_SSL`, `JWT_SECRET`, `APP_ORIGIN`, `PORT`, `UPLOAD_DIR`, and `MAX_FILE_SIZE`. Bootstrap password variables are required only when seeding.
 
-Accessories, educational videos, checklists, and testimonials are static merchandising/content fixtures, not inventory records and must not be presented as stock or purchase state.
+Production URL: https://cortek-enterprises-production.up.railway.app

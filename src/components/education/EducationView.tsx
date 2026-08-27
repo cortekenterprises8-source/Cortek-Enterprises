@@ -9,7 +9,7 @@ import {
   Cpu 
 } from 'lucide-react';
 import { SITE_CONFIG } from '../../config/siteConfig';
-import { EDUCATIONAL_VIDEOS } from '../../data/mockVideos';
+import { EDUCATIONAL_VIDEOS } from '../../data/staticContent';
 import { WhatsAppButton } from '../common/WhatsAppButton';
 
 export const EducationView: React.FC = () => {
