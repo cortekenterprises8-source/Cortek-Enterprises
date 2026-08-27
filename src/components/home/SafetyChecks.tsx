@@ -6,7 +6,10 @@ import {
   CirclePlay, 
   ShieldCheck, 
   ExternalLink,
-  Shield
+  Shield,
+  ScanLine,
+  ClipboardCheck,
+  UserRoundCheck
 } from 'lucide-react';
 import { BUYER_INSPECTION_CHECKLIST } from '../../data/staticContent';
 import { SITE_CONFIG } from '../../config/siteConfig';
@@ -24,19 +27,35 @@ export const SafetyChecks: React.FC = () => {
       <div className="max-w-7xl mx-auto space-y-12">
         
         {/* Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-4">
+        <div className="relative overflow-hidden text-center max-w-5xl mx-auto space-y-4 px-5 py-10 sm:py-14 rounded-[2rem] bg-slate-950 text-white shadow-xl">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.28),_transparent_48%),radial-gradient(circle_at_bottom_left,_rgba(37,99,235,0.22),_transparent_42%)]" />
+          <div className="relative">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold font-mono">
             <Shield className="w-4 h-4 text-emerald-600" />
             <span>Cortek Safety Standards</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
             Safety Checks & Buyer Protection
           </h1>
 
-          <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+          <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl mx-auto">
             Practical inspection steps and verification methods to protect yourself when buying any pre-owned device — whether from Cortek or elsewhere in Karol Bagh.
           </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-5xl mx-auto">
+          {[
+            { icon: ScanLine, label: 'Inspect live', detail: 'See the checks happen in front of you', color: 'text-blue-700 bg-blue-50 border-blue-100' },
+            { icon: ClipboardCheck, label: 'Verify the evidence', detail: 'Match condition, parts, and battery claims', color: 'text-emerald-700 bg-emerald-50 border-emerald-100' },
+            { icon: UserRoundCheck, label: 'Decide with confidence', detail: 'Ask questions before you pay', color: 'text-amber-700 bg-amber-50 border-amber-100' },
+          ].map(({ icon: Icon, label, detail, color }) => (
+            <div key={label} className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
+              <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${color}`}><Icon className="w-5 h-5" /></div>
+              <div><p className="text-xs font-extrabold text-slate-900">{label}</p><p className="text-[11px] text-slate-500 mt-0.5">{detail}</p></div>
+            </div>
+          ))}
         </div>
 
         {/* 7-Step Buyer Inspection Checklist */}
@@ -84,7 +103,7 @@ export const SafetyChecks: React.FC = () => {
                     className="w-full p-4 sm:p-5 text-left flex items-start justify-between gap-3 cursor-pointer"
                   >
                     <div className="flex items-start gap-3.5">
-                      <span className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="w-8 h-8 rounded-xl bg-emerald-600 text-white border border-emerald-500 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
                         {item.step}
                       </span>
                       <div>

@@ -34,7 +34,7 @@ export const AdminDashboard: React.FC = () => {
     phones, 
     addPhone, 
     updatePhone, 
-    deletePhone, 
+    deleteInventoryUnit,
     resetToDefaultStock,
     setActiveView,
     setFilters,
@@ -660,20 +660,6 @@ export const AdminDashboard: React.FC = () => {
                               Complete Sale
                             </button>
                           )}
-                          {item.status === 'Available' && item.inventoryUnitId && (
-                            <button
-                              onClick={() => {
-                                if (window.confirm(`Retire ${item.brand} ${item.model} from active stock?`)) {
-                                  retirePhone(item.inventoryUnitId!)
-                                    .then(() => showToast(`Retired ${item.model} successfully`))
-                                    .catch(error => showToast(`Retire failed: ${error instanceof Error ? error.message : 'Operation failed'}`));
-                                }
-                              }}
-                              className="px-2.5 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 border border-red-200 font-bold text-[11px] cursor-pointer transition-colors"
-                            >
-                              Retire
-                            </button>
-                          )}
                           <button
                             onClick={() => handleOpenEdit(item)}
                             className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
@@ -683,13 +669,14 @@ export const AdminDashboard: React.FC = () => {
                           </button>
                           <button
                             onClick={async () => {
-                              if (window.confirm(`Delete ${item.brand} ${item.model} from master stock?`)) {
-                                await deletePhone(item.id);
+                              if (window.confirm(`Permanently delete ${item.brand} ${item.model} (${item.stockTag || 'this unit'})?`)) {
+                                await deleteInventoryUnit(item.inventoryUnitId!);
                                 showToast(`Deleted ${item.model}`);
                               }
                             }}
-                            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors cursor-pointer"
-                            title="Delete"
+                            disabled={!item.inventoryUnitId || item.status === 'Sold Out'}
+                            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                            title={item.status === 'Sold Out' ? 'Sold stock cannot be deleted' : 'Permanently delete this stock unit'}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

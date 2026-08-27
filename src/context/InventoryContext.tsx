@@ -19,6 +19,7 @@ interface InventoryContextType {
   addPhone: (phone: Omit<PhoneItem, 'id' | 'dateAdded'>) => Promise<void>;
   updatePhone: (phone: PhoneItem) => Promise<void>;
   deletePhone: (id: string) => Promise<void>;
+  deleteInventoryUnit: (id: string) => Promise<void>;
   reservePhone: (inventoryUnitId: string, customerName: string, customerPhone: string, durationMinutes?: number) => Promise<void>;
   releasePhoneReservation: (inventoryUnitId: string) => Promise<void>;
   sellPhone: (inventoryUnitId: string, customerName: string, customerPhone: string, salePriceInr: number, discountInr?: number, reservationId?: string) => Promise<void>;
@@ -64,6 +65,7 @@ const emptyInventoryContext: InventoryContextType = {
   addPhone: async () => undefined,
   updatePhone: async () => undefined,
   deletePhone: async () => undefined,
+  deleteInventoryUnit: async () => undefined,
   reservePhone: async () => undefined,
   releasePhoneReservation: async () => undefined,
   sellPhone: async () => undefined,
@@ -295,6 +297,11 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     await refreshPhones();
   }, [refreshPhones]);
 
+  const deleteInventoryUnit = useCallback(async (id: string) => {
+    await api.del(`/api/inventory/${id}`);
+    await refreshPhones();
+  }, [refreshPhones]);
+
   const reservePhone = useCallback(async (inventoryUnitId: string, customerName: string, customerPhone: string, durationMinutes = 120) => {
     const normalizedName = customerName.trim();
     const normalizedPhone = customerPhone.replace(/\D/g, '');
@@ -382,6 +389,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         addPhone,
         updatePhone,
         deletePhone,
+        deleteInventoryUnit,
         reservePhone,
         releasePhoneReservation,
         sellPhone,

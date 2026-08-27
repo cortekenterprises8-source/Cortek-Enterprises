@@ -243,13 +243,20 @@ export const HomeHighlights: React.FC<HomeHighlightsProps> = ({ onOpenSearch }) 
       </section>
       
       {/* 2. FOUR MAIN TRUST HIGHLIGHTS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+          <div>
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-blue-700 font-mono">The Cortek difference</span>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">Why buyers choose Cortek</h2>
+          </div>
+          <p className="max-w-md text-xs sm:text-sm text-slate-500 leading-relaxed sm:text-right">Every listing starts with a hands-on check, clear evidence, and time for you to verify the device yourself.</p>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
           {/* Highlight 1 */}
-          <div className="relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 cortek-premium-card space-y-3 hover:-translate-y-1 hover:border-blue-300 transition-all">
+          <div className="relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 cortek-premium-card space-y-3 hover:-translate-y-1 hover:border-blue-300 transition-all group">
             <div className="absolute inset-x-0 top-0 h-1 bg-blue-500" />
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+            <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold ring-4 ring-blue-50/70 group-hover:ring-blue-100 transition-all">
               <ShieldCheck className="w-5 h-5 text-blue-600" />
             </div>
             <div>
@@ -259,9 +266,9 @@ export const HomeHighlights: React.FC<HomeHighlightsProps> = ({ onOpenSearch }) 
           </div>
 
           {/* Highlight 2 */}
-          <div className="relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 cortek-premium-card space-y-3 hover:-translate-y-1 hover:border-emerald-300 transition-all">
+          <div className="relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 cortek-premium-card space-y-3 hover:-translate-y-1 hover:border-emerald-300 transition-all group">
             <div className="absolute inset-x-0 top-0 h-1 bg-emerald-500" />
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold ring-4 ring-emerald-50/70 group-hover:ring-emerald-100 transition-all">
               <BatteryCharging className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
@@ -271,9 +278,9 @@ export const HomeHighlights: React.FC<HomeHighlightsProps> = ({ onOpenSearch }) 
           </div>
 
           {/* Highlight 3 */}
-          <div className="relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 cortek-premium-card space-y-3 hover:-translate-y-1 hover:border-amber-300 transition-all">
+          <div className="relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 cortek-premium-card space-y-3 hover:-translate-y-1 hover:border-amber-300 transition-all group">
             <div className="absolute inset-x-0 top-0 h-1 bg-amber-500" />
-            <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-800 flex items-center justify-center font-bold">
+            <div className="w-11 h-11 rounded-2xl bg-amber-50 text-amber-800 flex items-center justify-center font-bold ring-4 ring-amber-50/70 group-hover:ring-amber-100 transition-all">
               <Receipt className="w-5 h-5 text-amber-600" />
             </div>
             <div>
@@ -283,10 +290,10 @@ export const HomeHighlights: React.FC<HomeHighlightsProps> = ({ onOpenSearch }) 
           </div>
 
           {/* Highlight 4 */}
-          <div className="relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 cortek-premium-card space-y-3 hover:-translate-y-1 hover:border-purple-300 transition-all">
-            <div className="absolute inset-x-0 top-0 h-1 bg-purple-500" />
-            <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold">
-              <Star className="w-5 h-5 text-purple-600" />
+          <div className="relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 cortek-premium-card space-y-3 hover:-translate-y-1 hover:border-rose-300 transition-all group">
+            <div className="absolute inset-x-0 top-0 h-1 bg-rose-500" />
+            <div className="w-11 h-11 rounded-2xl bg-rose-50 text-rose-700 flex items-center justify-center font-bold ring-4 ring-rose-50/70 group-hover:ring-rose-100 transition-all">
+              <Star className="w-5 h-5 text-rose-600" />
             </div>
             <div>
               <h3 className="font-extrabold text-sm text-slate-900">4.9★ Karol Bagh Store</h3>

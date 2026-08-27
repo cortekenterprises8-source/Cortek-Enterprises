@@ -138,7 +138,7 @@ router.patch('/:id/status', authenticate, authorize('admin'), validate(updateInv
   }
 });
 
-// DELETE /api/inventory/:id - Admin deactivate (transactional, enforces valid transitions)
+// DELETE /api/inventory/:id - Admin permanently removes an unsold inventory unit.
 router.delete('/:id', authenticate, authorize('admin'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -150,21 +150,32 @@ router.delete('/:id', authenticate, authorize('admin'), async (req: Request, res
       if (current.length === 0) throw new Error('NOT_FOUND');
       const unit = current[0];
 
-      assertInventoryTransition(unit.status, 'retired');
+      if (unit.status === 'sold') throw new Error('UNIT_HAS_SALE');
+
+      await client.query('DELETE FROM device_inspections WHERE inventory_unit_id = $1', [id]);
+      await client.query('DELETE FROM device_verifications WHERE inventory_unit_id = $1', [id]);
+      await client.query('DELETE FROM reservations WHERE inventory_unit_id = $1', [id]);
 
       const { rows } = await client.query(
-        `UPDATE inventory_units SET status = 'retired', updated_at = now() WHERE id = $1 RETURNING *`,
+        'DELETE FROM inventory_units WHERE id = $1 RETURNING *',
         [id]
       );
-      await createAuditLog(req, 'INVENTORY_STATUS_CHANGED', 'inventory_unit', id, {
-        from: unit.status, to: 'retired',
+      const { rows: remainingUnits } = await client.query(
+        'SELECT 1 FROM inventory_units WHERE product_id = $1 LIMIT 1',
+        [unit.product_id]
+      );
+      if (remainingUnits.length === 0) {
+        await client.query('DELETE FROM products WHERE id = $1', [unit.product_id]);
+      }
+      await createAuditLog(req, 'INVENTORY_DELETED', 'inventory_unit', id, {
+        stockTag: unit.stock_tag, status: unit.status,
       }, client);
       return rows[0];
     });
-    res.json({ message: 'Inventory unit deactivated.', status: result.status });
+    res.json({ message: 'Inventory unit deleted.', id: result.id });
   } catch (err: any) {
     if (err.message === 'NOT_FOUND') return res.status(404).json({ error: 'Inventory unit not found.' });
-    if (err.message?.startsWith('INVALID_TRANSITION')) return res.status(400).json({ error: err.message });
+    if (err.message === 'UNIT_HAS_SALE') return res.status(409).json({ error: 'Sold stock cannot be deleted. Restore or retain the sale record instead.' });
     console.error('Inventory deactivate error:', err);
     res.status(500).json({ error: 'Internal server error.' });
   }
