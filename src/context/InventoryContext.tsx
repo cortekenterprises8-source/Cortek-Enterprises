@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { PhoneItem, FilterOptions, UserRole, ProductCategory } from '../types';
+import { PhoneItem, FilterOptions, ProductCategory } from '../types';
 import { api } from '../api/client';
 
 interface InventoryContextType {
@@ -12,8 +12,6 @@ interface InventoryContextType {
   activeView: string;
   setActiveView: (view: string, phoneId?: string) => void;
   activeDetailId: string | null;
-  userRole: UserRole;
-  setUserRole: (role: UserRole) => void;
   filters: FilterOptions;
   setFilters: React.Dispatch<React.SetStateAction<FilterOptions>>;
   resetFilters: () => void;
@@ -55,8 +53,6 @@ const emptyInventoryContext: InventoryContextType = {
   activeView: 'home',
   setActiveView: () => undefined,
   activeDetailId: null,
-  userRole: 'customer',
-  setUserRole: () => undefined,
   filters: DEFAULT_FILTERS,
   setFilters: () => undefined,
   resetFilters: () => undefined,
@@ -146,7 +142,6 @@ function mapPhoneItemToApiPayload(phone: Omit<PhoneItem, 'id' | 'dateAdded'>) {
 
 export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [phones, setPhones] = useState<PhoneItem[]>([]);
-  const [userRole, setUserRoleState] = useState<UserRole>('customer');
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [selectedPhone, setSelectedPhone] = useState<PhoneItem | null>(null);
@@ -176,16 +171,11 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     refreshPhones();
   }, [refreshPhones]);
 
-  const setUserRole = (role: UserRole) => {
-    setUserRoleState(role);
-  };
-
   useEffect(() => {
     const handleHashChange = () => {
       const pathname = window.location.pathname.replace(/^\/+|\/+$/g, '');
       const hash = window.location.hash.replace('#/', '').replace('#', '');
       if (!hash && pathname) {
-        setUserRole('customer');
         if (pathname.startsWith('stock/')) {
           const id = pathname.replace('stock/', '');
           setActiveViewState('detail');
@@ -199,62 +189,43 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         return;
       }
       if (!hash || hash === '' || hash === 'home') {
-        setUserRole('customer');
         setActiveViewState('home');
         setActiveDetailId(null);
       } else if (hash.startsWith('stock/')) {
-        setUserRole('customer');
         const id = hash.replace('stock/', '');
         setActiveViewState('detail');
         setActiveDetailId(id);
         const match = phones.find(p => p.id === id);
         if (match) setSelectedPhone(match);
       } else if (hash === 'stock') {
-        setUserRole('customer');
         setActiveViewState('stock');
         setActiveDetailId(null);
       } else if (hash === 'accessories') {
-        setUserRole('customer');
         setActiveViewState('accessories');
         setActiveDetailId(null);
       } else if (hash === 'watches') {
-        setUserRole('customer');
         setActiveViewState('stock');
         setFilters(prev => ({ ...prev, category: 'Watches' }));
         setActiveDetailId(null);
       } else if (hash === 'tablets') {
-        setUserRole('customer');
         setActiveViewState('stock');
         setFilters(prev => ({ ...prev, category: 'Tablets' }));
         setActiveDetailId(null);
       } else if (hash === 'laptops') {
-        setUserRole('customer');
         setActiveViewState('stock');
         setFilters(prev => ({ ...prev, category: 'Laptops' }));
         setActiveDetailId(null);
       } else if (hash === 'gadgets') {
-        setUserRole('customer');
         setActiveViewState('stock');
         setFilters(prev => ({ ...prev, category: 'Other Gadgets' }));
         setActiveDetailId(null);
       } else if (hash === 'videos' || hash === 'education') {
-        setUserRole('customer');
         setActiveViewState('education');
         setActiveDetailId(null);
       } else if (hash === 'safety') {
-        setUserRole('customer');
         setActiveViewState('safety');
         setActiveDetailId(null);
-      } else if (hash === 'sales') {
-        setUserRole('customer');
-        setActiveViewState('home');
-        setActiveDetailId(null);
-      } else if (hash === 'admin') {
-        setUserRole('customer');
-        setActiveViewState('home');
-        setActiveDetailId(null);
       } else if (hash === 'contact') {
-        setUserRole('customer');
         setActiveViewState('contact');
         setActiveDetailId(null);
       }
@@ -320,14 +291,11 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const phone = phones.find(p => p.id === id);
     if (!phone) return;
     if (phone.status === 'Available') {
-      await api.post(`/api/inventory/${id}/status`, { status: 'reserved' });
+      await api.patch(`/api/inventory/${id}/status`, { status: 'reserved' });
       setPhones(prev => prev.map(p => p.id === id ? { ...p, status: 'Booked' } : p));
     } else if (phone.status === 'Booked') {
-      await api.post(`/api/inventory/${id}/status`, { status: 'sold' });
+      await api.patch(`/api/inventory/${id}/status`, { status: 'sold' });
       setPhones(prev => prev.map(p => p.id === id ? { ...p, status: 'Sold Out' } : p));
-    } else {
-      await api.post(`/api/inventory/${id}/status`, { status: 'available' });
-      setPhones(prev => prev.map(p => p.id === id ? { ...p, status: 'Available' } : p));
     }
   }, [phones]);
 
@@ -355,8 +323,6 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         activeView,
         setActiveView,
         activeDetailId,
-        userRole,
-        setUserRole,
         filters,
         setFilters,
         resetFilters,

@@ -31,7 +31,6 @@ export const SalesPortal: React.FC = () => {
     updatePhone, 
     togglePhoneStatus, 
     setActiveView,
-    setUserRole 
   } = useInventory();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -380,7 +379,6 @@ export const SalesPortal: React.FC = () => {
 
             <button
               onClick={() => {
-                setUserRole('customer');
                 setActiveView('stock');
               }}
               className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"

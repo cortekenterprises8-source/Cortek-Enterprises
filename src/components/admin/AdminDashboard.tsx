@@ -15,7 +15,6 @@ import {
   ShieldCheck,
   Tag,
   Eye,
-  UserCheck,
   ArrowRight,
   Sparkles,
   Receipt,
@@ -37,7 +36,6 @@ export const AdminDashboard: React.FC = () => {
     togglePhoneStatus, 
     resetToDefaultStock,
     setActiveView,
-    setUserRole,
     setFilters
   } = useInventory();
 
@@ -378,24 +376,12 @@ export const AdminDashboard: React.FC = () => {
               <span>Export CSV</span>
             </button>
 
-            {/* Switch Mode Buttons */}
-            <button
-              onClick={() => {
-                window.location.assign('/sales');
-              }}
-              className="px-3.5 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <UserCheck className="w-4 h-4 text-blue-600" />
-              <span>Sales View</span>
-            </button>
-
             <button onClick={logout} className="px-3.5 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold cursor-pointer">
               Sign Out
             </button>
 
             <button
               onClick={() => {
-                setUserRole('customer');
                 setActiveView('stock');
               }}
               className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
