@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
+    "test": "node --import tsx --test tests/**/*.test.ts",
     "server:dev": "tsx server/index.ts",
     "server:start": "node --import tsx server/index.ts",
     "db:migrate": "tsx server/migrate.ts",

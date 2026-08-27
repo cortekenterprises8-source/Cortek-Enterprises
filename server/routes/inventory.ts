@@ -52,14 +52,18 @@ router.get('/', authenticate, authorize('admin', 'sales'), async (req: Request, 
 router.post('/', authenticate, authorize('admin'), validate(createInventoryUnitSchema), async (req: Request, res: Response) => {
   try {
     const { productId, stockTag, imei, salePriceInr } = req.body;
-    const { rows } = await pool.query(
-      `INSERT INTO inventory_units (product_id, stock_tag, imei, sale_price_inr, created_by)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [productId, stockTag, imei || null, salePriceInr || null, getUser(req)!.id]
-    );
-    await createAuditLog(req, 'INVENTORY_CREATED', 'inventory_unit', rows[0].id, { stockTag, productId });
+    const rows = await withTransaction(async (client) => {
+      const { rows: inserted } = await client.query(
+        `INSERT INTO inventory_units (product_id, stock_tag, imei, sale_price_inr, created_by)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [productId, stockTag, imei || null, salePriceInr || null, getUser(req)!.id]
+      );
+      await createAuditLog(req, 'INVENTORY_CREATED', 'inventory_unit', inserted[0].id, { stockTag, productId }, client);
+      return inserted;
+    });
     res.status(201).json({
       id: rows[0].id,
+      productId: rows[0].product_id,
       stockTag: rows[0].stock_tag,
       status: rows[0].status,
     });
@@ -92,8 +96,8 @@ router.patch('/:id/status', authenticate, authorize('admin', 'sales'), validate(
 
       // Validate status transition
       const validTransitions: Record<string, string[]> = {
-        available: ['reserved', 'sold', 'retired'],
-        reserved: ['available', 'sold'],
+        available: ['retired'],
+        reserved: [],
         sold: [],
         retired: [],
       };
@@ -138,8 +142,8 @@ router.delete('/:id', authenticate, authorize('admin'), async (req: Request, res
       const unit = current[0];
 
       const validTransitions: Record<string, string[]> = {
-        available: ['reserved', 'sold', 'retired'],
-        reserved: ['available', 'sold'],
+        available: ['retired'],
+        reserved: [],
         sold: [],
         retired: [],
       };

@@ -46,7 +46,7 @@ export const createProductSchema = z.object({
   })),
   keyFeatures: z.array(z.string()).default([]),
   images: z.array(z.object({
-    url: z.string().url(),
+    url: z.string().min(1, 'Image URL is required'),
     altText: z.string().default(''),
     sortOrder: z.number().int().min(0).default(0),
     isPrimary: z.boolean().default(false),

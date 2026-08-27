@@ -25,6 +25,7 @@ import { useInventory } from '../../context/InventoryContext';
 import { PhoneItem, ConditionGrade, StockStatus, ProductCategory } from '../../types';
 import { formatINR } from '../../config/siteConfig';
 import { useAuth } from '../../context/AuthContext';
+import { api } from '../../api/client';
 
 export const AdminDashboard: React.FC = () => {
   const { logout } = useAuth();
@@ -33,7 +34,6 @@ export const AdminDashboard: React.FC = () => {
     addPhone, 
     updatePhone, 
     deletePhone, 
-    togglePhoneStatus, 
     resetToDefaultStock,
     setActiveView,
     setFilters
@@ -240,10 +240,10 @@ export const AdminDashboard: React.FC = () => {
           originalBillIncluded: formData.billAvailable
         }
       };
-      updatePhone(updated);
+      await updatePhone(updated);
       showToast(`Updated ${formData.model} successfully`);
     } else {
-      addPhone({
+      await addPhone({
         category: formData.category,
         brand: formData.brand,
         model: formData.model,
@@ -577,12 +577,7 @@ export const AdminDashboard: React.FC = () => {
 
                       <td className="py-3 px-3">
                         <div className="flex flex-col items-start gap-1.5">
-                          <button
-                            onClick={() => {
-                              togglePhoneStatus(item.id);
-                              const nextStatus = item.status === 'Available' ? 'Booked' : item.status === 'Booked' ? 'Sold Out' : 'Available';
-                              showToast(`Marked ${item.model} as ${nextStatus}`);
-                            }}
+                          <span
                             className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
                               item.status === 'Available'
                                 ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
@@ -592,7 +587,7 @@ export const AdminDashboard: React.FC = () => {
                             }`}
                           >
                             {item.status}
-                          </button>
+                          </span>
                           {item.status === 'Booked' && item.bookingCustomer && (
                             <div className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 max-w-[180px]">
                               {item.bookingCustomer.name} • {item.bookingCustomer.phone}
@@ -611,9 +606,9 @@ export const AdminDashboard: React.FC = () => {
                             <Edit className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               if (window.confirm(`Delete ${item.brand} ${item.model} from master stock?`)) {
-                                deletePhone(item.id);
+                                await deletePhone(item.id);
                                 showToast(`Deleted ${item.model}`);
                               }
                             }}
@@ -901,12 +896,15 @@ export const AdminDashboard: React.FC = () => {
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={e => {
+                      onChange={async e => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = () => setFormData(prev => ({ ...prev, imageUrl: String(reader.result) }));
-                        reader.readAsDataURL(file);
+                        try {
+                          const uploaded = await api.uploadImage(file);
+                          setFormData(prev => ({ ...prev, imageUrl: uploaded.url }));
+                        } catch (error) {
+                          showToast(`Upload failed: ${error instanceof Error ? error.message : 'Operation failed'}`);
+                        }
                       }}
                     />
                   </label>

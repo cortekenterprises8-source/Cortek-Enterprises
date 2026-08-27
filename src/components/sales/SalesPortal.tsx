@@ -22,6 +22,7 @@ import { useInventory } from '../../context/InventoryContext';
 import { PhoneItem, ConditionGrade, StockStatus, ProductCategory } from '../../types';
 import { formatINR, SITE_CONFIG } from '../../config/siteConfig';
 import { useAuth } from '../../context/AuthContext';
+import { api } from '../../api/client';
 
 export const SalesPortal: React.FC = () => {
   const { logout } = useAuth();
@@ -29,7 +30,6 @@ export const SalesPortal: React.FC = () => {
     phones, 
     addPhone, 
     updatePhone, 
-    togglePhoneStatus, 
     setActiveView,
   } = useInventory();
 
@@ -246,10 +246,10 @@ export const SalesPortal: React.FC = () => {
           originalBillIncluded: formData.billAvailable
         }
       };
-      updatePhone(updated);
+      await updatePhone(updated);
       showToast(`Updated ${formData.model} successfully`);
     } else {
-      addPhone({
+      await addPhone({
         category: formData.category,
         brand: formData.brand,
         model: formData.model,
@@ -561,11 +561,7 @@ export const SalesPortal: React.FC = () => {
                       </td>
 
                       <td className="py-3 px-3">
-                        <button
-                          onClick={() => {
-                            togglePhoneStatus(item.id);
-                            showToast(isAvailable ? `Marked ${item.model} as Sold Out!` : `Marked ${item.model} as Available!`);
-                          }}
+                        <span
                           className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-colors cursor-pointer flex items-center gap-1.5 ${
                             isAvailable
                               ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
@@ -573,7 +569,7 @@ export const SalesPortal: React.FC = () => {
                           }`}
                         >
                           {isAvailable ? 'Available' : 'Sold Out'}
-                        </button>
+                        </span>
                       </td>
 
                       <td className="py-3 px-3 text-right">
@@ -843,12 +839,15 @@ export const SalesPortal: React.FC = () => {
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={e => {
+                      onChange={async e => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = () => setFormData(prev => ({ ...prev, imageUrl: String(reader.result) }));
-                        reader.readAsDataURL(file);
+                        try {
+                          const uploaded = await api.uploadImage(file);
+                          setFormData(prev => ({ ...prev, imageUrl: uploaded.url }));
+                        } catch (error) {
+                          showToast(`Upload failed: ${error instanceof Error ? error.message : 'Operation failed'}`);
+                        }
                       }}
                     />
                   </label>

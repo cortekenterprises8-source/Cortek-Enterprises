@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { pool } from '../db';
+import { pool, withTransaction } from '../db';
 import { authenticate, authorize, getUser } from '../middleware/authenticate';
 import { validate } from '../middleware/validate';
 import { createAuditLog } from '../middleware/audit';
@@ -51,8 +51,9 @@ router.get('/', async (req: Request, res: Response) => {
       SELECT COUNT(DISTINCT p.id)::int as total
       FROM products p
       LEFT JOIN inventory_units iu ON iu.product_id = p.id
-      ${where}
-      ${havingClause}
+      ${params.availableOnly
+        ? `${where ? `${where} AND` : 'WHERE'} EXISTS (SELECT 1 FROM inventory_units available_unit WHERE available_unit.product_id = p.id AND available_unit.status = 'available')`
+        : where}
     `;
     const countResult = await pool.query(countQuery, values);
     const total = countResult.rows[0]?.total || 0;
@@ -88,6 +89,21 @@ router.get('/', async (req: Request, res: Response) => {
       }
     }
 
+    const unitMap: Record<string, any[]> = {};
+    if (productIds.length > 0) {
+      const { rows: units } = await pool.query(
+        `SELECT id, product_id, stock_tag, imei, status, sale_price_inr, inspection, created_at, updated_at
+         FROM inventory_units WHERE product_id = ANY($1::uuid[]) ORDER BY created_at`,
+        [productIds]
+      );
+      for (const unit of units) {
+        if (!unitMap[unit.product_id]) unitMap[unit.product_id] = [];
+        unitMap[unit.product_id].push({ id: unit.id, productId: unit.product_id, stockTag: unit.stock_tag,
+          imei: unit.imei, status: unit.status, salePriceInr: unit.sale_price_inr, inspection: unit.inspection,
+          createdAt: unit.created_at, updatedAt: unit.updated_at });
+      }
+    }
+
     const products = rows.map((r: any) => ({
       id: r.id,
       category: r.category,
@@ -96,10 +112,10 @@ router.get('/', async (req: Request, res: Response) => {
       storage: r.storage,
       colour: r.colour,
       colorHex: r.color_hex,
-      condition: r.condition_grade,
+      conditionGrade: r.condition_grade,
       conditionDescription: r.condition_description,
       batteryHealth: r.battery_health,
-      price: r.price_inr,
+      priceInr: r.price_inr,
       originalMsp: r.original_msp,
       billAvailable: r.bill_available,
       billAmount: r.bill_amount,
@@ -111,11 +127,11 @@ router.get('/', async (req: Request, res: Response) => {
       processor: r.processor,
       inBox: r.in_box,
       keyFeatures: r.key_features,
-      images: (imageMap[r.id] || []).map((i: any) => i.url),
+      images: (imageMap[r.id] || []).map((i: any) => ({ url: i.url, altText: i.alt_text, sortOrder: i.sort_order, isPrimary: i.is_primary })),
+      units: unitMap[r.id] || [],
       dateAdded: r.created_at?.toISOString?.()?.split('T')[0] || '',
-      status: r.available_units > 0 ? 'Available' : r.sold_units > 0 ? 'Sold Out' : r.reserved_units > 0 ? 'Booked' : 'Available',
-      totalUnits: r.total_units,
-      availableUnits: r.available_units,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
     }));
 
     res.json({ products, total, page: params.page, limit: params.limit, pages: Math.ceil(total / params.limit) });
@@ -150,6 +166,10 @@ router.get('/:id', async (req: Request, res: Response) => {
       `SELECT * FROM product_images WHERE product_id = $1 ORDER BY sort_order`,
       [id]
     );
+    const { rows: units } = await pool.query(
+      `SELECT id, product_id, stock_tag, imei, status, sale_price_inr, inspection, created_at, updated_at
+       FROM inventory_units WHERE product_id = $1 ORDER BY created_at`, [id]
+    );
     const { rows: inspections } = await pool.query(
       `SELECT * FROM device_inspections WHERE inventory_unit_id IN
         (SELECT id FROM inventory_units WHERE product_id = $1)
@@ -164,10 +184,10 @@ router.get('/:id', async (req: Request, res: Response) => {
       storage: r.storage,
       colour: r.colour,
       colorHex: r.color_hex,
-      condition: r.condition_grade,
+      conditionGrade: r.condition_grade,
       conditionDescription: r.condition_description,
       batteryHealth: r.battery_health,
-      price: r.price_inr,
+      priceInr: r.price_inr,
       originalMsp: r.original_msp,
       billAvailable: r.bill_available,
       billAmount: r.bill_amount,
@@ -179,12 +199,14 @@ router.get('/:id', async (req: Request, res: Response) => {
       processor: r.processor,
       inBox: r.in_box,
       keyFeatures: r.key_features,
-      images: images.map((i: any) => i.url),
+      images: images.map((i: any) => ({ url: i.url, altText: i.alt_text, sortOrder: i.sort_order, isPrimary: i.is_primary })),
+      units: units.map((unit: any) => ({ id: unit.id, productId: unit.product_id, stockTag: unit.stock_tag,
+        imei: unit.imei, status: unit.status, salePriceInr: unit.sale_price_inr, inspection: unit.inspection,
+        createdAt: unit.created_at, updatedAt: unit.updated_at })),
       dateAdded: r.created_at?.toISOString?.()?.split('T')[0] || '',
-      status: r.available_units > 0 ? 'Available' : 'Sold Out',
-      totalUnits: r.total_units,
-      availableUnits: r.available_units,
-      inspection: inspections[0] || null,
+      status: r.available_units > 0 ? 'available' : 'sold',
+      inspection: inspections[0] ? { overallPass: inspections[0].overall_pass, physicalCondition: inspections[0].physical_condition,
+        inspectedAt: inspections[0].created_at } : null,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
     });
@@ -199,44 +221,53 @@ router.post('/', authenticate, authorize('admin', 'sales'), validate(createProdu
   try {
     const d = req.body;
     const stockTag = d.stockTag || `CK-${Date.now().toString(36).toUpperCase().slice(-6)}`;
-
-    const { rows } = await pool.query(
-      `INSERT INTO products (category, brand, model, storage, colour, color_hex, price_inr, original_msp,
-        bill_available, bill_amount, condition_grade, condition_description, battery_health,
-        screen_size, ram, processor, stock_tag, price_drop, featured, in_box, key_features)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
-       RETURNING *`,
-      [d.category, d.brand, d.model, d.storage, d.colour, d.colorHex || null,
-       d.priceInr, d.originalMsp || null, d.billAvailable, d.billAmount || null,
-       d.conditionGrade, d.conditionDescription, d.batteryHealth || null,
-       d.screenSize || null, d.ram || null, d.processor || null,
-       stockTag, d.priceDrop, d.featured, JSON.stringify(d.inBox), d.keyFeatures]
-    );
-
-    const product = rows[0];
-
-    // Create inventory unit
-    const unitTag = `${stockTag}-U1`;
-    await pool.query(
-      `INSERT INTO inventory_units (product_id, stock_tag, status, sale_price_inr, created_by)
-       VALUES ($1, $2, 'available', $3, $4)`,
-      [product.id, unitTag, d.priceInr, getUser(req)!.id]
-    );
-
-    // Create images
-    if (d.images && d.images.length > 0) {
-      for (const img of d.images) {
-        await pool.query(
+    const productId = await withTransaction(async (client) => {
+      const { rows } = await client.query(
+        `INSERT INTO products (category, brand, model, storage, colour, color_hex, price_inr, original_msp,
+          bill_available, bill_amount, condition_grade, condition_description, battery_health,
+          screen_size, ram, processor, stock_tag, price_drop, featured, in_box, key_features)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+         RETURNING id`,
+        [d.category, d.brand, d.model, d.storage, d.colour, d.colorHex || null,
+         d.priceInr, d.originalMsp || null, d.billAvailable, d.billAmount || null,
+         d.conditionGrade, d.conditionDescription, d.batteryHealth || null,
+         d.screenSize || null, d.ram || null, d.processor || null,
+         stockTag, d.priceDrop, d.featured, JSON.stringify(d.inBox), d.keyFeatures]
+      );
+      const product = rows[0];
+      await client.query(
+        `INSERT INTO inventory_units (product_id, stock_tag, status, sale_price_inr, created_by)
+         VALUES ($1, $2, 'available', $3, $4)`,
+        [product.id, `${stockTag}-U1`, d.priceInr, getUser(req)!.id]
+      );
+      for (const image of d.images) {
+        await client.query(
           `INSERT INTO product_images (product_id, url, alt_text, sort_order, is_primary)
            VALUES ($1, $2, $3, $4, $5)`,
-          [product.id, img.url, img.altText || '', img.sortOrder || 0, img.isPrimary || false]
+          [product.id, image.url, image.altText, image.sortOrder, image.isPrimary]
         );
       }
-    }
+      await createAuditLog(req, 'PRODUCT_CREATED', 'product', product.id, { brand: d.brand, model: d.model }, client);
+      return product.id;
+    });
 
-    await createAuditLog(req, 'PRODUCT_CREATED', 'product', product.id, { brand: d.brand, model: d.model });
-
-    res.status(201).json({ id: product.id, stockTag: product.stock_tag });
+    const { rows: created } = await pool.query(
+      `SELECT p.*, COALESCE(json_agg(DISTINCT jsonb_build_object(
+         'id', iu.id, 'productId', iu.product_id, 'stockTag', iu.stock_tag, 'status', iu.status,
+         'imei', iu.imei, 'salePriceInr', iu.sale_price_inr, 'inspection', iu.inspection
+       )) FILTER (WHERE iu.id IS NOT NULL), '[]') AS units,
+       COALESCE(json_agg(DISTINCT jsonb_build_object(
+         'url', pi.url, 'altText', pi.alt_text, 'sortOrder', pi.sort_order, 'isPrimary', pi.is_primary
+       )) FILTER (WHERE pi.id IS NOT NULL), '[]') AS images
+       FROM products p LEFT JOIN inventory_units iu ON iu.product_id = p.id
+       LEFT JOIN product_images pi ON pi.product_id = p.id WHERE p.id = $1 GROUP BY p.id`, [productId]
+    );
+    res.status(201).json({ ...created[0], colorHex: created[0].color_hex, priceInr: created[0].price_inr,
+      originalMsp: created[0].original_msp, billAvailable: created[0].bill_available, billAmount: created[0].bill_amount,
+      conditionGrade: created[0].condition_grade, conditionDescription: created[0].condition_description,
+      batteryHealth: created[0].battery_health, screenSize: created[0].screen_size, stockTag: created[0].stock_tag,
+      priceDrop: created[0].price_drop, inBox: created[0].in_box, keyFeatures: created[0].key_features,
+      dateAdded: created[0].created_at, createdAt: created[0].created_at, updatedAt: created[0].updated_at });
   } catch (err: any) {
     if (err.code === '23505') {
       return res.status(409).json({ error: 'Stock tag already exists.' });
@@ -283,27 +314,39 @@ router.patch('/:id', authenticate, authorize('admin', 'sales'), validate(updateP
     fields.push(`updated_at = now()`);
     values.push(id);
 
-    const { rows } = await pool.query(
-      `UPDATE products SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`,
-      values
-    );
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Product not found.' });
-    }
+    const updated = await withTransaction(async (client) => {
+      const { rows } = await client.query(
+        `UPDATE products SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id`,
+        values
+      );
+      if (rows.length === 0) throw new Error('PRODUCT_NOT_FOUND');
 
-    // Update images if provided
-    if (d.images) {
-      await pool.query('DELETE FROM product_images WHERE product_id = $1', [id]);
-      for (const img of d.images) {
-        await pool.query(
-          `INSERT INTO product_images (product_id, url, alt_text, sort_order, is_primary)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [id, img.url, img.altText || '', img.sortOrder || 0, img.isPrimary || false]
+      if (d.images) {
+        await client.query('DELETE FROM product_images WHERE product_id = $1', [id]);
+        for (const img of d.images) {
+          await client.query(
+            `INSERT INTO product_images (product_id, url, alt_text, sort_order, is_primary)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [id, img.url, img.altText || '', img.sortOrder || 0, img.isPrimary || false]
+          );
+        }
+      }
+
+      if (d.priceInr !== undefined) {
+        await client.query(
+          `UPDATE inventory_units SET sale_price_inr = $1, updated_at = now()
+           WHERE product_id = $2 AND status IN ('available', 'reserved')`,
+          [d.priceInr, id]
         );
       }
-    }
 
-    await createAuditLog(req, 'PRODUCT_UPDATED', 'product', id, { changes: Object.keys(d) });
+      await createAuditLog(req, 'PRODUCT_UPDATED', 'product', id, { changes: Object.keys(d) }, client);
+      return rows[0];
+    }).catch(error => {
+      if (error instanceof Error && error.message === 'PRODUCT_NOT_FOUND') return null;
+      throw error;
+    });
+    if (!updated) return res.status(404).json({ error: 'Product not found.' });
     res.json({ message: 'Product updated.' });
   } catch (err: any) {
     if (err.code === '23505') {
@@ -318,16 +361,21 @@ router.patch('/:id', authenticate, authorize('admin', 'sales'), validate(updateP
 router.delete('/:id', authenticate, authorize('admin'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { rows } = await pool.query(
-      'DELETE FROM products WHERE id = $1 RETURNING id, model',
-      [id]
-    );
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Product not found.' });
-    }
-    await createAuditLog(req, 'PRODUCT_DELETED', 'product', id, { model: rows[0].model });
+    const deleted = await withTransaction(async (client) => {
+      const { rows: sales } = await client.query(
+        `SELECT 1 FROM sales s JOIN inventory_units iu ON iu.id = s.inventory_unit_id
+         WHERE iu.product_id = $1 LIMIT 1`, [id]
+      );
+      if (sales.length > 0) throw new Error('PRODUCT_HAS_SALES');
+      const { rows } = await client.query('DELETE FROM products WHERE id = $1 RETURNING id, model', [id]);
+      if (rows.length === 0) throw new Error('PRODUCT_NOT_FOUND');
+      await createAuditLog(req, 'PRODUCT_DELETED', 'product', id, { model: rows[0].model }, client);
+      return rows[0];
+    });
     res.json({ message: 'Product deleted.' });
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message === 'PRODUCT_NOT_FOUND') return res.status(404).json({ error: 'Product not found.' });
+    if (err.message === 'PRODUCT_HAS_SALES') return res.status(409).json({ error: 'Sold products cannot be deleted.' });
     console.error('Product delete error:', err);
     res.status(500).json({ error: 'Internal server error.' });
   }

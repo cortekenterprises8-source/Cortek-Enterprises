@@ -47,7 +47,9 @@ router.post('/', authenticate, authorize('admin', 'sales'), validate(createCusto
   try {
     const { name, phone, email, notes } = req.body;
     const { rows } = await pool.query(
-      'INSERT INTO customers (name, phone, email, notes) VALUES ($1, $2, $3, $4) RETURNING *',
+      `INSERT INTO customers (name, phone, email, notes) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name, email = COALESCE(EXCLUDED.email, customers.email), notes = COALESCE(EXCLUDED.notes, customers.notes)
+       RETURNING *`,
       [name, phone, email || null, notes || '']
     );
     await createAuditLog(req, 'CUSTOMER_CREATED', 'customer', rows[0].id, { name, phone });
@@ -55,7 +57,8 @@ router.post('/', authenticate, authorize('admin', 'sales'), validate(createCusto
       id: rows[0].id, name: rows[0].name, phone: rows[0].phone,
       email: rows[0].email, notes: rows[0].notes,
     });
-  } catch (err) {
+  } catch (err: any) {
+    if (err.code === '23505') return res.status(409).json({ error: 'A customer with this phone already exists.' });
     console.error('Customer create error:', err);
     res.status(500).json({ error: 'Internal server error.' });
   }
@@ -80,7 +83,8 @@ router.patch('/:id', authenticate, authorize('admin', 'sales'), validate(updateC
     if (rows.length === 0) return res.status(404).json({ error: 'Customer not found.' });
     await createAuditLog(req, 'CUSTOMER_UPDATED', 'customer', id, { fields: fields.filter(f => !f.includes('updated_at')) });
     res.json({ id: rows[0].id, name: rows[0].name, phone: rows[0].phone, email: rows[0].email });
-  } catch (err) {
+  } catch (err: any) {
+    if (err.code === '23505') return res.status(409).json({ error: 'A customer with this phone already exists.' });
     console.error('Customer update error:', err);
     res.status(500).json({ error: 'Internal server error.' });
   }

@@ -1,6 +1,6 @@
 export type ConditionGrade = 'Like New (Flawless)' | 'Excellent (9.5/10)' | 'Very Good (8.5/10)' | 'Good (Minor Marks)';
 
-export type StockStatus = 'Available' | 'Booked' | 'Sold Out';
+export type StockStatus = 'Available' | 'Booked' | 'Sold Out' | 'Retired';
 
 export type ProductCategory = 'Phones' | 'Watches' | 'Tablets' | 'Laptops' | 'Accessories' | 'Other Gadgets';
 
@@ -8,6 +8,7 @@ export type UserRole = 'customer' | 'sales' | 'admin';
 
 export interface PhoneItem {
   id: string;
+  inventoryUnitId?: string;
   category?: ProductCategory;
   brand: string;
   model: string;
@@ -108,21 +109,21 @@ export interface ApiProduct {
   model: string;
   storage: string;
   colour: string;
-  color_hex: string | null;
-  price_inr: number;
-  original_msp: number | null;
-  bill_available: boolean;
-  bill_amount: number | null;
-  condition_grade: string;
-  condition_description: string;
-  battery_health: number | null;
-  screen_size: string | null;
+  colorHex: string | null;
+  priceInr: number;
+  originalMsp: number | null;
+  billAvailable: boolean;
+  billAmount: number | null;
+  conditionGrade: string;
+  conditionDescription: string;
+  batteryHealth: number | null;
+  screenSize: string | null;
   ram: string | null;
   processor: string | null;
-  stock_tag: string;
-  price_drop: boolean;
+  stockTag: string;
+  priceDrop: boolean;
   featured: boolean;
-  in_box: {
+  inBox: {
     charger_included?: boolean;
     original_box?: boolean;
     tax_invoice_provided?: boolean;
@@ -134,22 +135,23 @@ export interface ApiProduct {
     cableIncluded?: boolean;
     originalBillIncluded?: boolean;
   };
-  key_features: string[];
+  keyFeatures: string[];
   inspection_passed?: string[];
-  images: Array<{ url: string; alt_text: string }>;
-  units: Array<{ id: string; stock_tag: string; status: string }>;
-  created_at: string;
-  updated_at: string;
+  images: Array<{ url: string; altText: string; sortOrder: number; isPrimary: boolean }>;
+  units: ApiInventoryUnit[];
+  dateAdded: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ApiInventoryUnit {
   id: string;
-  product_id: string;
-  stock_tag: string;
+  productId: string;
+  stockTag: string;
   status: 'available' | 'reserved' | 'sold' | 'retired';
-  sale_price_inr: number | null;
-  created_at: string;
-  updated_at: string;
+  salePriceInr: number | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ApiReservation {

@@ -9,10 +9,16 @@ function hashPassword(password: string): string {
   return `scrypt$${salt}$${digest}`;
 }
 
+const adminPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD;
+const salesPassword = process.env.SALES_BOOTSTRAP_PASSWORD;
+if (!adminPassword || adminPassword.length < 12 || !salesPassword || salesPassword.length < 12) {
+  throw new Error('ADMIN_BOOTSTRAP_PASSWORD and SALES_BOOTSTRAP_PASSWORD must be set to values of at least 12 characters.');
+}
+
 await verifySchema(pool);
 
 // Seed admin user
-const adminHash = hashPassword('admin12345678');
+const adminHash = hashPassword(adminPassword);
 await pool.query(
   `INSERT INTO users (email, password_hash, role, name) VALUES ($1, $2, 'admin', 'Cortek Admin')
    ON CONFLICT (email) DO UPDATE SET password_hash = $2, name = 'Cortek Admin'`,
@@ -20,7 +26,7 @@ await pool.query(
 );
 
 // Seed sales user
-const salesHash = hashPassword('sales12345678');
+const salesHash = hashPassword(salesPassword);
 await pool.query(
   `INSERT INTO users (email, password_hash, role, name) VALUES ($1, $2, 'sales', 'Sales Counter')
    ON CONFLICT (email) DO UPDATE SET password_hash = $2, name = 'Sales Counter'`,

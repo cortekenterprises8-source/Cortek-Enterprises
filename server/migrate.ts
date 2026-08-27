@@ -11,6 +11,10 @@ try {
 	await client.query('BEGIN');
 	await client.query(migration);
 	await verifySchema(client);
+	await client.query(
+		`INSERT INTO schema_migrations (version) VALUES ($1) ON CONFLICT (version) DO NOTHING`,
+		['001_initial']
+	);
 	await client.query('COMMIT');
 	console.log('Database migration 001 applied and schema verified.');
 } catch (error) {

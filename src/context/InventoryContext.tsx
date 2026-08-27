@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { PhoneItem, FilterOptions, ProductCategory } from '../types';
+import { PhoneItem, FilterOptions, ProductCategory, ApiProduct } from '../types';
 import { api } from '../api/client';
 
 interface InventoryContextType {
@@ -19,7 +19,6 @@ interface InventoryContextType {
   addPhone: (phone: Omit<PhoneItem, 'id' | 'dateAdded'>) => Promise<void>;
   updatePhone: (phone: PhoneItem) => Promise<void>;
   deletePhone: (id: string) => Promise<void>;
-  togglePhoneStatus: (id: string) => Promise<void>;
   resetToDefaultStock: () => void;
   getPhoneById: (id: string) => PhoneItem | undefined;
   refreshPhones: () => Promise<void>;
@@ -60,7 +59,6 @@ const emptyInventoryContext: InventoryContextType = {
   addPhone: async () => undefined,
   updatePhone: async () => undefined,
   deletePhone: async () => undefined,
-  togglePhoneStatus: async () => undefined,
   resetToDefaultStock: () => undefined,
   getPhoneById: () => undefined,
   refreshPhones: async () => undefined,
@@ -68,35 +66,36 @@ const emptyInventoryContext: InventoryContextType = {
   apiError: null,
 };
 
-function mapApiProductToPhoneItem(apiProduct: any): PhoneItem {
-  const images = apiProduct.images?.map((img: any) => typeof img === 'string' ? img : img.url).filter(Boolean) || [];
-  const unit = apiProduct.units?.[0];
+function mapApiProductToPhoneItem(apiProduct: ApiProduct): PhoneItem {
+  const images = apiProduct.images?.map(img => img.url).filter(Boolean) || [];
+  const unit = apiProduct.units?.find(candidate => candidate.status === 'available') || apiProduct.units?.[0];
   const statusMap: Record<string, PhoneItem['status']> = {
     available: 'Available',
     reserved: 'Booked',
     sold: 'Sold Out',
-    retired: 'Sold Out',
+    retired: 'Retired',
   };
-  const inBox = apiProduct.inBox || apiProduct.in_box || {};
+  const inBox = apiProduct.inBox || {};
   return {
     id: apiProduct.id,
-    category: apiProduct.category || 'Phones',
+    inventoryUnitId: unit?.id,
+    category: (apiProduct.category || 'Phones') as ProductCategory,
     brand: apiProduct.brand,
     model: apiProduct.model,
     storage: apiProduct.storage,
     colour: apiProduct.colour,
-    colorHex: apiProduct.colorHex || apiProduct.color_hex,
-    condition: apiProduct.condition || apiProduct.condition_grade,
-    conditionDescription: apiProduct.conditionDescription || apiProduct.condition_description,
-    batteryHealth: apiProduct.batteryHealth ?? apiProduct.battery_health,
-    price: apiProduct.price ?? apiProduct.price_inr,
-    originalMsp: apiProduct.originalMsp ?? apiProduct.original_msp,
-    billAvailable: apiProduct.billAvailable ?? apiProduct.bill_available,
-    billAmount: apiProduct.billAmount ?? apiProduct.bill_amount,
-    priceDrop: apiProduct.priceDrop ?? apiProduct.price_drop,
+    colorHex: apiProduct.colorHex || undefined,
+    condition: apiProduct.conditionGrade as PhoneItem['condition'],
+    conditionDescription: apiProduct.conditionDescription,
+    batteryHealth: apiProduct.batteryHealth ?? undefined,
+    price: apiProduct.priceInr,
+    originalMsp: apiProduct.originalMsp ?? undefined,
+    billAvailable: apiProduct.billAvailable,
+    billAmount: apiProduct.billAmount ?? undefined,
+    priceDrop: apiProduct.priceDrop,
     featured: apiProduct.featured,
-    status: apiProduct.status || statusMap[unit?.status] || 'Available',
-    dateAdded: apiProduct.dateAdded || apiProduct.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+    status: statusMap[unit?.status || 'available'] || 'Available',
+    dateAdded: apiProduct.dateAdded || new Date().toISOString().split('T')[0],
     images: images.length > 0 ? images : ['/placeholder-phone.png'],
     inBox: {
       chargerIncluded: inBox.charger_included ?? inBox.chargerIncluded ?? true,
@@ -105,10 +104,10 @@ function mapApiProductToPhoneItem(apiProduct: any): PhoneItem {
       cableIncluded: inBox.cable_included ?? inBox.cableIncluded ?? true,
       originalBillIncluded: inBox.original_bill_included ?? inBox.originalBillIncluded,
     },
-    keyFeatures: apiProduct.key_features || [],
-    inspectionPassed: apiProduct.inspectionPassed || apiProduct.inspection_passed || [],
-    stockTag: apiProduct.stockTag || apiProduct.stock_tag,
-    screenSize: apiProduct.screenSize || apiProduct.screen_size,
+    keyFeatures: apiProduct.keyFeatures || [],
+    inspectionPassed: [],
+    stockTag: apiProduct.stockTag,
+    screenSize: apiProduct.screenSize || undefined,
     ram: apiProduct.ram,
     processor: apiProduct.processor,
   };
@@ -121,22 +120,23 @@ function mapPhoneItemToApiPayload(phone: Omit<PhoneItem, 'id' | 'dateAdded'>) {
     model: phone.model,
     storage: phone.storage,
     colour: phone.colour,
-    color_hex: phone.colorHex || null,
-    price_inr: phone.price,
-    original_msp: phone.originalMsp || null,
-    bill_available: phone.billAvailable ?? true,
-    bill_amount: phone.billAmount || null,
-    condition_grade: phone.condition,
-    condition_description: phone.conditionDescription,
-    battery_health: phone.batteryHealth || null,
-    screen_size: phone.screenSize || null,
+    colorHex: phone.colorHex || undefined,
+    priceInr: phone.price,
+    originalMsp: phone.originalMsp || undefined,
+    billAvailable: phone.billAvailable ?? true,
+    billAmount: phone.billAmount || undefined,
+    conditionGrade: phone.condition,
+    conditionDescription: phone.conditionDescription,
+    batteryHealth: phone.batteryHealth || undefined,
+    screenSize: phone.screenSize || undefined,
     ram: phone.ram || null,
     processor: phone.processor || null,
-    stock_tag: phone.stockTag || `CK-${Date.now().toString().slice(-6)}`,
-    price_drop: phone.priceDrop ?? false,
+    stockTag: phone.stockTag || `CK-${Date.now().toString().slice(-6)}`,
+    priceDrop: phone.priceDrop ?? false,
     featured: phone.featured ?? false,
-    in_box: phone.inBox,
-    key_features: phone.keyFeatures || [],
+    inBox: phone.inBox,
+    keyFeatures: phone.keyFeatures || [],
+    images: phone.images.map((url, index) => ({ url, altText: `${phone.brand} ${phone.model}`, sortOrder: index, isPrimary: index === 0 })),
   };
 }
 
@@ -154,9 +154,8 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setApiError(null);
     try {
       const token = api.getToken();
-      const data = await api.get<any>('/api/products', !!token);
-      const records = data.products || data;
-      const mapped = Array.isArray(records) ? records.map(mapApiProductToPhoneItem) : [];
+      const data = await api.get<{ products: ApiProduct[] }>('/api/products', !!token);
+      const mapped = data.products.map(mapApiProductToPhoneItem);
       setPhones(mapped);
       setApiError(null);
     } catch (err: any) {
@@ -265,39 +264,20 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const addPhone = useCallback(async (newPhoneData: Omit<PhoneItem, 'id' | 'dateAdded'>) => {
     const payload = mapPhoneItemToApiPayload(newPhoneData);
-    const created = await api.post<any>('/api/products', payload);
-    const mapped = mapApiProductToPhoneItem(created);
-    setPhones(prev => [mapped, ...prev]);
-  }, []);
+    await api.post('/api/products', payload);
+    await refreshPhones();
+  }, [refreshPhones]);
 
   const updatePhone = useCallback(async (updatedPhone: PhoneItem) => {
     const payload = mapPhoneItemToApiPayload(updatedPhone);
     await api.patch(`/api/products/${updatedPhone.id}`, payload);
-    setPhones(prev => prev.map(p => (p.id === updatedPhone.id ? updatedPhone : p)));
-    if (selectedPhone?.id === updatedPhone.id) {
-      setSelectedPhone(updatedPhone);
-    }
-  }, [selectedPhone]);
+    await refreshPhones();
+  }, [refreshPhones]);
 
   const deletePhone = useCallback(async (id: string) => {
     await api.del(`/api/products/${id}`);
-    setPhones(prev => prev.filter(p => p.id !== id));
-    if (selectedPhone?.id === id) {
-      setSelectedPhone(null);
-    }
-  }, [selectedPhone]);
-
-  const togglePhoneStatus = useCallback(async (id: string) => {
-    const phone = phones.find(p => p.id === id);
-    if (!phone) return;
-    if (phone.status === 'Available') {
-      await api.patch(`/api/inventory/${id}/status`, { status: 'reserved' });
-      setPhones(prev => prev.map(p => p.id === id ? { ...p, status: 'Booked' } : p));
-    } else if (phone.status === 'Booked') {
-      await api.patch(`/api/inventory/${id}/status`, { status: 'sold' });
-      setPhones(prev => prev.map(p => p.id === id ? { ...p, status: 'Sold Out' } : p));
-    }
-  }, [phones]);
+    await refreshPhones();
+  }, [refreshPhones]);
 
   const resetToDefaultStock = () => {
     refreshPhones();
@@ -330,7 +310,6 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         addPhone,
         updatePhone,
         deletePhone,
-        togglePhoneStatus,
         resetToDefaultStock,
         getPhoneById,
         refreshPhones,

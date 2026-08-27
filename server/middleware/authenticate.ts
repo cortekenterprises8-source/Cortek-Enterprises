@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { pool } from '../db';
 
 const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret) throw new Error('JWT_SECRET is required');
@@ -15,17 +16,22 @@ export interface AuthenticatedRequest extends Request {
   user?: AuthUser;
 }
 
-export function authenticate(req: Request, res: Response, next: NextFunction) {
+export async function authenticate(req: Request, res: Response, next: NextFunction) {
   const header = req.header('authorization');
   if (!header?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Authentication required.' });
   }
   try {
     const payload = jwt.verify(header.slice(7), jwtSecret) as jwt.JwtPayload & AuthUser;
-    if (!payload.sub || !payload.role) {
+    if (!payload.sub) {
       return res.status(401).json({ error: 'Invalid token.' });
     }
-    (req as AuthenticatedRequest).user = { id: payload.sub, email: payload.email, role: payload.role, name: payload.name || '' };
+    const { rows } = await pool.query(
+      'SELECT id, email, role, name FROM users WHERE id = $1 AND disabled_at IS NULL',
+      [payload.sub]
+    );
+    if (rows.length === 0) return res.status(401).json({ error: 'Invalid or expired session.' });
+    (req as AuthenticatedRequest).user = rows[0];
     next();
   } catch {
     return res.status(401).json({ error: 'Invalid or expired session.' });

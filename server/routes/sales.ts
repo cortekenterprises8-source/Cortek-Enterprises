@@ -107,12 +107,11 @@ router.post('/', authenticate, authorize('admin', 'sales'), validate(createSaleS
         [inventoryUnitId]
       );
 
-      return { sale: saleRows[0], customerId: actualCustomerId };
-    });
+      await createAuditLog(req, 'SALE_RECORDED', 'sale', saleRows[0].id, {
+        inventoryUnitId, salePriceInr,
+      }, client);
 
-    await createAuditLog(req, 'SALE_RECORDED', 'sale', result.sale.id, {
-      inventoryUnitId: req.body.inventoryUnitId,
-      salePriceInr: req.body.salePriceInr,
+      return { sale: saleRows[0], customerId: actualCustomerId };
     });
     res.status(201).json({
       id: result.sale.id,

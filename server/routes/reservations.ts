@@ -44,18 +44,13 @@ router.post('/', authenticate, authorize('admin', 'sales'), validate(createReser
       // Find or create customer
       let actualCustomerId = customerId;
       if (!actualCustomerId && customerPhone) {
-        const { rows: existing } = await client.query(
-          'SELECT id FROM customers WHERE phone = $1', [customerPhone]
+        const { rows: customer } = await client.query(
+          `INSERT INTO customers (name, phone, email) VALUES ($1, $2, $3)
+           ON CONFLICT (phone) DO UPDATE SET email = COALESCE(EXCLUDED.email, customers.email)
+           RETURNING id`,
+          [customerName || 'Walk-in', customerPhone, customerEmail || null]
         );
-        if (existing.length > 0) {
-          actualCustomerId = existing[0].id;
-        } else {
-          const { rows: newCust } = await client.query(
-            'INSERT INTO customers (name, phone, email) VALUES ($1, $2, $3) RETURNING id',
-            [customerName || 'Walk-in', customerPhone, customerEmail || null]
-          );
-          actualCustomerId = newCust[0].id;
-        }
+        actualCustomerId = customer[0].id;
       }
       if (!actualCustomerId) throw new Error('CUSTOMER_REQUIRED');
 
@@ -88,11 +83,11 @@ router.post('/', authenticate, authorize('admin', 'sales'), validate(createReser
         [inventoryUnitId]
       );
 
-      return { reservation: resRows[0], customerId: actualCustomerId };
-    });
+      await createAuditLog(req, 'RESERVATION_CREATED', 'reservation', resRows[0].id, {
+        inventoryUnitId,
+      }, client);
 
-    await createAuditLog(req, 'RESERVATION_CREATED', 'reservation', result.reservation.id, {
-      inventoryUnitId: req.body.inventoryUnitId,
+      return { reservation: resRows[0], customerId: actualCustomerId };
     });
     res.status(201).json({
       id: result.reservation.id,
@@ -133,8 +128,8 @@ router.post('/cancel', authenticate, authorize('admin', 'sales'), validate(cance
         `UPDATE inventory_units SET status = 'available', updated_at = now() WHERE id = $1 AND status = 'reserved'`,
         [r.inventory_unit_id]
       );
+      await createAuditLog(req, 'RESERVATION_CANCELLED', 'reservation', reservationId, { reason }, client);
     });
-    await createAuditLog(req, 'RESERVATION_CANCELLED', 'reservation', reservationId, { reason });
     res.json({ message: 'Reservation cancelled.' });
   } catch (err: any) {
     if (err.message === 'NOT_FOUND') return res.status(404).json({ error: 'Reservation not found.' });
@@ -147,20 +142,23 @@ router.post('/cancel', authenticate, authorize('admin', 'sales'), validate(cance
 // POST /api/reservations/expire - Expire overdue reservations
 router.post('/expire', authenticate, authorize('admin'), async (req: Request, res: Response) => {
   try {
-    const { rows: expired } = await pool.query(
-      `UPDATE reservations SET status = 'expired', updated_at = now()
-       WHERE status IN ('pending', 'active') AND expires_at < now()
-       RETURNING id, inventory_unit_id`
-    );
-    for (const r of expired) {
-      await pool.query(
-        `UPDATE inventory_units SET status = 'available', updated_at = now()
-         WHERE id = $1 AND status = 'reserved'`,
-        [r.inventory_unit_id]
+    const expiredCount = await withTransaction(async (client) => {
+      const { rows: expired } = await client.query(
+        `UPDATE reservations SET status = 'expired', updated_at = now()
+         WHERE status IN ('pending', 'active') AND expires_at < now()
+         RETURNING id, inventory_unit_id`
       );
-    }
-    await createAuditLog(req, 'RESERVATIONS_EXPIRED', 'reservation', undefined, { count: expired.length });
-    res.json({ expired: expired.length });
+      for (const r of expired) {
+        await client.query(
+          `UPDATE inventory_units SET status = 'available', updated_at = now()
+           WHERE id = $1 AND status = 'reserved'`,
+          [r.inventory_unit_id]
+        );
+        await createAuditLog(req, 'RESERVATION_EXPIRED', 'reservation', r.id, { inventoryUnitId: r.inventory_unit_id }, client);
+      }
+      return expired.length;
+    });
+    res.json({ expired: expiredCount });
   } catch (err) {
     console.error('Reservation expire error:', err);
     res.status(500).json({ error: 'Internal server error.' });

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { pool } from '../db';
+import { pool, withTransaction } from '../db';
 import { authenticate, authorize, getUser } from '../middleware/authenticate';
 import { validate } from '../middleware/validate';
 import { createAuditLog } from '../middleware/audit';
@@ -50,24 +50,27 @@ router.post('/', authenticate, authorize('admin', 'sales'), validate(createInspe
       d.speakersOk && d.microphoneOk && d.chargingOk && d.biometricOk &&
       d.sensorsOk && d.buttonsOk && d.networkOk && d.wifiOk && d.bluetoothOk;
 
-    const { rows } = await pool.query(
-      `INSERT INTO device_inspections
+    const result = await withTransaction(async (client) => {
+      const { rows: units } = await client.query('SELECT id FROM inventory_units WHERE id = $1 FOR UPDATE', [d.inventoryUnitId]);
+      if (units.length === 0) throw new Error('UNIT_NOT_FOUND');
+      const { rows } = await client.query(
+        `INSERT INTO device_inspections
         (inventory_unit_id, inspected_by, display_ok, touch_ok, battery_ok, cameras_ok,
          speakers_ok, microphone_ok, charging_ok, biometric_ok, true_tone_ok,
          sensors_ok, buttons_ok, network_ok, wifi_ok, bluetooth_ok,
          physical_condition, replaced_parts, technician_notes, overall_pass)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
        RETURNING *`,
-      [d.inventoryUnitId, getUser(req)!.id, d.displayOk, d.touchOk, d.batteryOk, d.camerasOk,
+        [d.inventoryUnitId, getUser(req)!.id, d.displayOk, d.touchOk, d.batteryOk, d.camerasOk,
        d.speakersOk, d.microphoneOk, d.chargingOk, d.biometricOk, d.trueToneOk ?? null,
        d.sensorsOk, d.buttonsOk, d.networkOk, d.wifiOk, d.bluetoothOk,
        d.physicalCondition, d.replacedParts, d.technicianNotes, overallPass]
-    );
+      );
 
     // Store summary on inventory unit inspection field
-    await pool.query(
-      `UPDATE inventory_units SET inspection = $1, updated_at = now() WHERE id = $2`,
-      [JSON.stringify({
+      await client.query(
+        `UPDATE inventory_units SET inspection = $1, updated_at = now() WHERE id = $2`,
+        [JSON.stringify({
         overallPass,
         checkedAt: new Date().toISOString(),
         checkedBy: getUser(req)!.email,
@@ -75,14 +78,17 @@ router.post('/', authenticate, authorize('admin', 'sales'), validate(createInspe
         cameras: d.camerasOk, speakers: d.speakersOk, mic: d.microphoneOk,
         charging: d.chargingOk, biometric: d.biometricOk, sensors: d.sensorsOk,
         buttons: d.buttonsOk, network: d.networkOk, wifi: d.wifiOk, bluetooth: d.bluetoothOk,
-      }), d.inventoryUnitId]
-    );
+        }), d.inventoryUnitId]
+      );
 
-    await createAuditLog(req, 'INSPECTION_CREATED', 'inspection', rows[0].id, {
-      inventoryUnitId: d.inventoryUnitId, overallPass,
+      await createAuditLog(req, 'INSPECTION_CREATED', 'inspection', rows[0].id, {
+        inventoryUnitId: d.inventoryUnitId, overallPass,
+      }, client);
+      return rows[0];
     });
-    res.status(201).json({ id: rows[0].id, overallPass });
+    res.status(201).json({ id: result.id, overallPass });
   } catch (err) {
+    if (err instanceof Error && err.message === 'UNIT_NOT_FOUND') return res.status(404).json({ error: 'Inventory unit not found.' });
     console.error('Inspection create error:', err);
     res.status(500).json({ error: 'Internal server error.' });
   }
