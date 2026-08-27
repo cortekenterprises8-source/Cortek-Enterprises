@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'node:crypto';
-import * as jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { pool } from '../db';
 import { loginSchema } from '../schemas';
 import { validate } from '../middleware/validate';

@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { NextFunction, Request, Response } from 'express';
-import * as jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { pool } from './db';
 
