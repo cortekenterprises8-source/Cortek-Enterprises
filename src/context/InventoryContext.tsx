@@ -294,11 +294,13 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [refreshPhones]);
 
   const reservePhone = useCallback(async (inventoryUnitId: string, customerName: string, customerPhone: string, durationMinutes = 120) => {
+    const normalizedName = customerName.trim();
+    const normalizedPhone = customerPhone.replace(/\D/g, '');
     await api.post('/api/reservations', {
       inventoryUnitId,
-      customerName: customerName.trim(),
-      customerPhone: customerPhone.replace(/\D/g, ''),
       durationMinutes,
+      ...(normalizedName ? { customerName: normalizedName } : {}),
+      ...(normalizedPhone ? { customerPhone: normalizedPhone } : {}),
     });
     await refreshPhones();
   }, [refreshPhones]);
@@ -324,13 +326,15 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     discountInr = 0,
     reservationId?: string
   ) => {
+    const normalizedName = customerName.trim();
+    const normalizedPhone = customerPhone.replace(/\D/g, '');
     await api.post('/api/sales', {
       inventoryUnitId,
-      customerName: customerName.trim(),
-      customerPhone: customerPhone.replace(/\D/g, ''),
       salePriceInr,
       discountInr,
       reservationId,
+      ...(normalizedName ? { customerName: normalizedName } : {}),
+      ...(normalizedPhone ? { customerPhone: normalizedPhone } : {}),
     });
     await refreshPhones();
   }, [refreshPhones]);

@@ -111,7 +111,7 @@ export const AdminDashboard: React.FC = () => {
   const totalStockValue = availableItems.reduce((acc, curr) => acc + curr.price, 0);
   const avgUnitPrice = availableItems.length > 0 ? Math.round(totalStockValue / availableItems.length) : 0;
 
-  const categories = ['All', 'Phones', 'Watches', 'Tablets', 'Laptops', 'Accessories', 'Other Gadgets'];
+  const categories = ['Phones', 'Watches', 'Tablets', 'Laptops', 'Accessories', 'Other Gadgets'];
 
   const filteredPhones = phones.filter(p => {
     if (selectedCategory !== 'All') {

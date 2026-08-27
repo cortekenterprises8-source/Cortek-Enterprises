@@ -43,16 +43,16 @@ router.post('/', authenticate, authorize('admin', 'sales'), validate(createReser
 
       // Find or create customer
       let actualCustomerId = customerId;
-      if (!actualCustomerId && customerPhone) {
+      if (!actualCustomerId) {
+        const contactKey = customerPhone || `walk-in-${inventoryUnitId}`;
         const { rows: customer } = await client.query(
           `INSERT INTO customers (name, phone, email) VALUES ($1, $2, $3)
            ON CONFLICT (phone) DO UPDATE SET email = COALESCE(EXCLUDED.email, customers.email)
            RETURNING id`,
-          [customerName || 'Walk-in', customerPhone, customerEmail || null]
+          [customerName || 'Walk-in', contactKey, customerEmail || null]
         );
         actualCustomerId = customer[0].id;
       }
-      if (!actualCustomerId) throw new Error('CUSTOMER_REQUIRED');
 
       // Lock inventory unit
       const { rows: units } = await client.query(

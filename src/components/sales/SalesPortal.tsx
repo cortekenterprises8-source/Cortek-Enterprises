@@ -99,7 +99,7 @@ export const SalesPortal: React.FC = () => {
   const bookedUnits = phones.filter(p => p.status === 'Booked').length;
   const soldUnits = phones.filter(p => p.status === 'Sold Out').length;
 
-  const categories = ['All', 'Phones', 'Watches', 'Tablets', 'Laptops', 'Accessories', 'Other Gadgets'];
+  const categories = ['Phones', 'Watches', 'Tablets', 'Laptops', 'Accessories', 'Other Gadgets'];
 
   const filteredItems = phones.filter(p => {
     if (searchQuery) {

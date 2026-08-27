@@ -45,21 +45,21 @@ router.post('/', authenticate, authorize('admin', 'sales'), validate(createSaleS
 
       // Find or create customer
       let actualCustomerId = customerId;
-      if (!actualCustomerId && customerPhone) {
+      if (!actualCustomerId) {
+        const contactKey = customerPhone || `walk-in-${inventoryUnitId}`;
         const { rows: existing } = await client.query(
-          'SELECT id FROM customers WHERE phone = $1', [customerPhone]
+          'SELECT id FROM customers WHERE phone = $1', [contactKey]
         );
         if (existing.length > 0) {
           actualCustomerId = existing[0].id;
         } else {
           const { rows: newCust } = await client.query(
             'INSERT INTO customers (name, phone, email) VALUES ($1, $2, $3) RETURNING id',
-            [customerName || 'Walk-in', customerPhone, customerEmail || null]
+            [customerName || 'Walk-in', contactKey, customerEmail || null]
           );
           actualCustomerId = newCust[0].id;
         }
       }
-      if (!actualCustomerId) throw new Error('CUSTOMER_REQUIRED');
 
       // Lock inventory unit
       const { rows: units } = await client.query(
