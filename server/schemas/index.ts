@@ -44,6 +44,7 @@ export const createProductSchema = z.object({
     originalBox: true,
     taxInvoiceProvided: true,
     cableIncluded: true,
+    warrantyApplicable: false,
   })),
   keyFeatures: z.array(z.string()).default([]),
   images: z.array(z.object({

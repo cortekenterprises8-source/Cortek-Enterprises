@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { 
   Plus, 
   Trash2, 
@@ -51,6 +52,10 @@ export const AdminDashboard: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingPhone, setEditingPhone] = useState<PhoneItem | null>(null);
   const [customerAction, setCustomerAction] = useState<{ item: PhoneItem; action: 'reserve' | 'sell' } | null>(null);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkResult, setBulkResult] = useState<{ imported: number; errors: string[] } | null>(null);
+  const bulkFileRef = useRef<HTMLInputElement>(null);
 
   // Form State with optional MRP and Bill Amount
   const [formData, setFormData] = useState({
@@ -359,6 +364,92 @@ export const AdminDashboard: React.FC = () => {
     showToast('Exported CSV successfully!');
   };
 
+  const downloadBulkTemplate = () => {
+    const link = document.createElement('a');
+    link.href = '/assets/bulk-stock-template.csv';
+    link.download = 'cortek-bulk-stock-template.csv';
+    link.click();
+  };
+
+  const parseBoolean = (value: unknown, fallback = false) => {
+    if (value === undefined || value === null || value === '') return fallback;
+    return ['true', 'yes', '1', 'y'].includes(String(value).trim().toLowerCase());
+  };
+
+  const handleBulkImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setBulkBusy(true);
+    setBulkResult(null);
+    const errors: string[] = [];
+    let imported = 0;
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+      for (let index = 0; index < rows.length; index += 1) {
+        const row = rows[index];
+        const rowNumber = index + 2;
+        const model = String(row.Model || '').trim();
+        const brand = String(row.Brand || '').trim();
+        const price = Number(row.Price);
+        if (!brand || !model || !Number.isFinite(price) || price < 0) {
+          errors.push(`Row ${rowNumber}: Brand, Model, and a valid Price are required.`);
+          continue;
+        }
+        const battery = row.BatteryHealth === '' || row.BatteryHealth === undefined ? undefined : Number(row.BatteryHealth);
+        if (battery !== undefined && (!Number.isInteger(battery) || battery < 0 || battery > 100)) {
+          errors.push(`Row ${rowNumber}: BatteryHealth must be blank or an integer from 0 to 100.`);
+          continue;
+        }
+        const imageUrl = String(row.ImageUrl || '').trim();
+        const additionalImageUrl = String(row.AdditionalImageUrl || '').trim();
+        try {
+          await addPhone({
+            category: (String(row.Category || 'Phones') as ProductCategory),
+            brand,
+            model,
+            storage: String(row.Storage || 'N/A'),
+            colour: String(row.Colour || ''),
+            condition: (String(row.Condition || 'A+') as ConditionGrade),
+            conditionDescription: String(row.ConditionDescription || "DON'T COMPARE WITH FAKE BOX OR KIT UNITS ! ASLI ASLI HI HOTA HAI"),
+            batteryHealth: battery,
+            price,
+            originalMsp: row.OriginalMsp === '' ? undefined : Number(row.OriginalMsp),
+            billAvailable: parseBoolean(row.BillAvailable),
+            billAmount: row.BillAmount === '' ? undefined : Number(row.BillAmount),
+            featured: parseBoolean(row.Featured),
+            priceDrop: parseBoolean(row.PriceDrop),
+            status: 'Available',
+            images: [imageUrl || '/placeholder-phone.png', ...(additionalImageUrl ? [additionalImageUrl] : [])],
+            stockTag: String(row.StockTag || '').trim() || undefined,
+            ram: String(row.RAM || '').trim() || undefined,
+            processor: String(row.Processor || '').trim() || undefined,
+            inBox: {
+              originalBox: parseBoolean(row.OriginalBox, true),
+              chargerIncluded: parseBoolean(row.ChargerIncluded, true),
+              cableIncluded: parseBoolean(row.CableIncluded, true),
+              taxInvoiceProvided: parseBoolean(row.BillAvailable),
+              warrantyApplicable: parseBoolean(row.WarrantyApplicable),
+            },
+            keyFeatures: [],
+            inspectionPassed: [],
+          });
+          imported += 1;
+        } catch (error) {
+          errors.push(`Row ${rowNumber}: ${error instanceof Error ? error.message : 'Import failed.'}`);
+        }
+      }
+      setBulkResult({ imported, errors });
+      if (imported > 0) showToast(`Imported ${imported} stock item${imported === 1 ? '' : 's'} successfully`);
+    } catch (error) {
+      setBulkResult({ imported: 0, errors: [error instanceof Error ? error.message : 'Could not read this spreadsheet.'] });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 py-6 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -400,6 +491,14 @@ export const AdminDashboard: React.FC = () => {
             >
               <Plus className="w-4 h-4" />
               <span>Add New Item</span>
+            </button>
+
+            <button
+              onClick={() => { setBulkResult(null); setShowBulkModal(true); }}
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Bulk Excel Upload</span>
             </button>
 
             <button
@@ -698,6 +797,30 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Add / Edit Gadget Modal with Optional MRP and Bill Amount */}
+        {showBulkModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs">
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-xl">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2"><FileSpreadsheet className="w-5 h-5 text-blue-600" />Bulk stock upload</h3>
+                  <p className="text-xs text-slate-500 mt-1">Upload .xlsx, .xls, or .csv. Each valid row becomes one live stock item.</p>
+                </div>
+                <button onClick={() => setShowBulkModal(false)} className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 cursor-pointer" aria-label="Close bulk upload"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 space-y-2">
+                <p className="text-xs font-bold text-blue-900">Use the supplied template columns</p>
+                <p className="text-[11px] text-blue-800">Required: Brand, Model, Price. Add ImageUrl and AdditionalImageUrl for product photos. BatteryHealth may be blank.</p>
+                <button onClick={downloadBulkTemplate} className="text-xs font-bold text-blue-700 underline cursor-pointer">Download Excel template</button>
+              </div>
+              <input ref={bulkFileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleBulkImport} className="hidden" />
+              <button disabled={bulkBusy} onClick={() => bulkFileRef.current?.click()} className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-bold flex items-center justify-center gap-2 cursor-pointer disabled:cursor-wait">
+                <Upload className="w-4 h-4" />{bulkBusy ? 'Importing live stock...' : 'Choose Excel file'}
+              </button>
+              {bulkResult && <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2"><p className="text-sm font-bold text-emerald-700">Imported: {bulkResult.imported}</p>{bulkResult.errors.length > 0 && <div className="text-xs text-red-700 space-y-1 max-h-32 overflow-y-auto">{bulkResult.errors.map(error => <p key={error}>{error}</p>)}</div>}</div>}
+            </div>
+          </div>
+        )}
+
         {showAddModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs animate-in fade-in duration-200">
             <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-5 shadow-xl">
