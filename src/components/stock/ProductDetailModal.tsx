@@ -136,17 +136,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ phone, o
                 </span>
               </div>
 
-              {/* Bottom Stock Tag & Authenticity Ribbon */}
-              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
-                {phone.stockTag && (
-                  <div className="text-xs font-mono text-white bg-slate-950/85 px-3 py-1.5 rounded-xl border border-slate-700/60 backdrop-blur-md">
-                    STOCK ID: {phone.stockTag}
-                  </div>
-                )}
-
+              {/* Authenticity ribbon */}
+              <div className="absolute bottom-4 left-4 right-4 flex justify-end">
                 <div className="text-xs font-bold text-emerald-300 bg-slate-950/85 px-3 py-1.5 rounded-xl border border-emerald-500/40 backdrop-blur-md flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>100% Genuine Used</span>
+                  <span>Genuine, tested unit</span>
                 </div>
               </div>
             </div>
@@ -233,8 +227,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ phone, o
               </div>
             </div>
 
-            {/* Quick Spec Pills */}
-            <div className="grid grid-cols-3 gap-3">
+            {/* Product Summary */}
+            <div className="p-4 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-700">Product summary</h2>
+                {phone.inBox.warrantyApplicable && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg">Warranty applicable</span>}
+              </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-xs text-center">
                 <span className="text-[11px] text-slate-500 block font-medium">Storage</span>
                 <span className="text-sm sm:text-base font-bold text-slate-900 mt-0.5 block font-mono">{phone.storage}</span>
@@ -257,10 +256,20 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ phone, o
                   {phone.condition.split(' ')[0]}
                 </span>
               </div>
+              {phone.ram && <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 shadow-xs text-center">
+                <span className="text-[11px] text-slate-500 block font-medium">RAM</span>
+                <span className="text-sm sm:text-base font-bold text-slate-900 mt-0.5 block font-mono">{phone.ram}</span>
+              </div>}
+              {phone.processor && <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 shadow-xs text-center">
+                <span className="text-[11px] text-slate-500 block font-medium">Processor</span>
+                <span className="text-xs font-bold text-slate-900 mt-0.5 block truncate">{phone.processor}</span>
+              </div>}
+            </div>
+              <p className="text-xs text-slate-600 leading-relaxed border-t border-slate-100 pt-3">{phone.conditionDescription || "DON'T COMPARE WITH FAKE BOX OR KIT UNITS ! ASLI ASLI HI HOTA HAI"}</p>
             </div>
 
             {/* Battery Health Audit Card */}
-            {phone.batteryHealth && (
+            {phone.batteryHealth !== undefined && (
               <div className="p-5 rounded-3xl bg-white border border-slate-200/90 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
@@ -311,19 +320,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ phone, o
                   <span>Original Box</span>
                 </div>
 
-                <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${
-                  phone.inBox.taxInvoiceProvided 
-                    ? 'bg-emerald-50/60 text-slate-800 border-emerald-200' 
-                    : 'bg-slate-50 text-slate-400 border-slate-200'
-                }`}>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Store Purchase Bill</span>
-                </div>
-
-                {phone.billAvailable && (
+                {phone.billAvailable && phone.billAmount && (
                   <div className="p-2.5 rounded-xl border bg-blue-50/60 text-slate-800 border-blue-200 flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
-                    <span>{phone.billAmount ? `Orig. Purchase Bill (₹${phone.billAmount.toLocaleString('en-IN')})` : 'Original Purchase Bill'}</span>
+                    <span>Original Bill (₹{phone.billAmount.toLocaleString('en-IN')})</span>
                   </div>
                 )}
 
@@ -344,6 +344,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ phone, o
                   {phone.inBox.cableIncluded ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <X className="w-4 h-4 text-slate-400 shrink-0" />}
                   <span>Charging Cable</span>
                 </div>
+
+                {phone.inBox.warrantyApplicable && (
+                  <div className="p-2.5 rounded-xl border bg-emerald-50/60 text-slate-800 border-emerald-200 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Testing Warranty</span>
+                  </div>
+                )}
               </div>
             </div>
 

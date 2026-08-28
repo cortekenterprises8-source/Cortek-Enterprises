@@ -7,12 +7,14 @@ import {
   Smartphone, 
   Eye, 
   Cpu 
+  , ChevronDown, ChevronUp
 } from 'lucide-react';
 import { SITE_CONFIG } from '../../config/siteConfig';
 import { EDUCATIONAL_VIDEOS } from '../../data/staticContent';
 import { WhatsAppButton } from '../common/WhatsAppButton';
 
 export const EducationView: React.FC = () => {
+  const [expandedIndex, setExpandedIndex] = React.useState<number | null>(null);
   const guidePoints = [
     {
       title: "1. The Fake 100% Battery Boost Chip Trap",
@@ -82,12 +84,17 @@ export const EducationView: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {guidePoints.map((point, idx) => {
               const Icon = point.icon;
+              const isExpanded = expandedIndex === idx;
               return (
                 <div
                   key={idx}
-                  className="p-6 sm:p-7 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-5 flex flex-col justify-between"
+                  className={`rounded-3xl bg-white border shadow-xs overflow-hidden transition-all ${isExpanded ? 'border-emerald-300 shadow-md' : 'border-slate-200'}`}
                 >
-                  <div className="space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedIndex(isExpanded ? null : idx)}
+                    className="w-full p-6 sm:p-7 text-left flex items-center justify-between gap-4 cursor-pointer"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center shrink-0">
                         <Icon className="w-5 h-5" />
@@ -96,7 +103,10 @@ export const EducationView: React.FC = () => {
                         {point.title}
                       </h3>
                     </div>
+                    {isExpanded ? <ChevronUp className="w-5 h-5 text-emerald-600 shrink-0" /> : <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" />}
+                  </button>
 
+                  {isExpanded && <div className="px-6 pb-6 sm:px-7 sm:pb-7 space-y-4">
                     <div className="p-4 rounded-2xl bg-rose-50/50 border border-rose-100 space-y-1.5 text-xs text-slate-700">
                       <span className="font-bold text-rose-800 flex items-center gap-1.5">
                         <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
@@ -106,9 +116,8 @@ export const EducationView: React.FC = () => {
                         {point.explanation}
                       </p>
                     </div>
-                  </div>
 
-                  <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1 text-xs text-emerald-900">
+                    <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1 text-xs text-emerald-900">
                     <span className="font-bold text-emerald-800 flex items-center gap-1.5">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                       The Cortek Standard:
@@ -116,7 +125,8 @@ export const EducationView: React.FC = () => {
                     <p className="leading-relaxed">
                       {point.cortekStandard}
                     </p>
-                  </div>
+                    </div>
+                  </div>}
                 </div>
               );
             })}

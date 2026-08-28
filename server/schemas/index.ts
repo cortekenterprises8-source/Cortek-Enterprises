@@ -24,8 +24,8 @@ export const createProductSchema = z.object({
   originalMsp: z.number().int().min(0).optional(),
   billAvailable: z.boolean().default(false),
   billAmount: z.number().int().min(0).optional(),
-  conditionGrade: z.string().default('Like New (Flawless)'),
-  conditionDescription: z.string().default(''),
+  conditionGrade: z.enum(['A+', 'A', 'B', 'C']).default('A+'),
+  conditionDescription: z.string().default("DON'T COMPARE WITH FAKE BOX OR KIT UNITS ! ASLI ASLI HI HOTA HAI"),
   batteryHealth: z.number().int().min(0).max(100).optional(),
   screenSize: z.string().optional(),
   ram: z.string().optional(),
@@ -38,6 +38,7 @@ export const createProductSchema = z.object({
     originalBox: z.boolean().default(true),
     taxInvoiceProvided: z.boolean().default(true),
     cableIncluded: z.boolean().default(true),
+    warrantyApplicable: z.boolean().default(false),
   }).default(() => ({
     chargerIncluded: true,
     originalBox: true,

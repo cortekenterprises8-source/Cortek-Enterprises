@@ -1,4 +1,4 @@
-export type ConditionGrade = 'Like New (Flawless)' | 'Excellent (9.5/10)' | 'Very Good (8.5/10)' | 'Good (Minor Marks)';
+export type ConditionGrade = 'A+' | 'A' | 'B' | 'C' | 'Like New (Flawless)' | 'Excellent (9.5/10)' | 'Very Good (8.5/10)' | 'Good (Minor Marks)';
 
 export type StockStatus = 'Available' | 'Booked' | 'Sold Out' | 'Retired';
 
@@ -39,6 +39,7 @@ export interface PhoneItem {
     taxInvoiceProvided: boolean;
     cableIncluded: boolean;
     originalBillIncluded?: boolean;
+    warrantyApplicable?: boolean;
   };
   keyFeatures: string[];
   inspectionPassed: string[];
@@ -134,6 +135,8 @@ export interface ApiProduct {
     taxInvoiceProvided?: boolean;
     cableIncluded?: boolean;
     originalBillIncluded?: boolean;
+    warrantyApplicable?: boolean;
+    warranty_applicable?: boolean;
   };
   keyFeatures: string[];
   inspection_passed?: string[];

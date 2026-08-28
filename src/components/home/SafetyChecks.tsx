@@ -6,17 +6,15 @@ import {
   CirclePlay, 
   ShieldCheck, 
   ExternalLink,
-  Shield,
   ScanLine,
   ClipboardCheck,
   UserRoundCheck
 } from 'lucide-react';
 import { BUYER_INSPECTION_CHECKLIST } from '../../data/staticContent';
 import { SITE_CONFIG } from '../../config/siteConfig';
-import { WhatsAppButton } from '../common/WhatsAppButton';
 
 export const SafetyChecks: React.FC = () => {
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const toggleExpand = (idx: number) => {
     setExpandedIndex(prev => (prev === idx ? null : idx));
@@ -30,11 +28,6 @@ export const SafetyChecks: React.FC = () => {
         <div className="relative overflow-hidden text-center max-w-5xl mx-auto space-y-4 px-5 py-10 sm:py-14 rounded-[2rem] bg-slate-950 text-white shadow-xl">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.28),_transparent_48%),radial-gradient(circle_at_bottom_left,_rgba(37,99,235,0.22),_transparent_42%)]" />
           <div className="relative">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold font-mono">
-            <Shield className="w-4 h-4 text-emerald-600" />
-            <span>Cortek Safety Standards</span>
-          </div>
-
           <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
             Safety Checks & Buyer Protection
           </h1>
@@ -207,20 +200,6 @@ export const SafetyChecks: React.FC = () => {
             </div>
           </div>
         </section>
-
-        {/* Contact Callout */}
-        <div className="p-8 rounded-3xl bg-white border border-slate-200 shadow-sm text-center space-y-4 max-w-2xl mx-auto">
-          <h3 className="text-xl font-bold text-slate-900">Have Questions About a Specific Phone?</h3>
-          <p className="text-xs text-slate-600">
-            Our Karol Bagh team is available on WhatsApp to check battery health logs, share high-res photos of current stock, or verify serial numbers.
-          </p>
-          <div className="pt-2">
-            <WhatsAppButton
-              size="md"
-              label="Ask Technical Team on WhatsApp"
-            />
-          </div>
-        </div>
 
       </div>
     </div>

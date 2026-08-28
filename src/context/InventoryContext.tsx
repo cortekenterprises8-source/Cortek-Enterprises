@@ -115,6 +115,7 @@ function mapApiProductToPhoneItem(apiProduct: ApiProduct): PhoneItem {
       taxInvoiceProvided: inBox.tax_invoice_provided ?? inBox.taxInvoiceProvided ?? true,
       cableIncluded: inBox.cable_included ?? inBox.cableIncluded ?? true,
       originalBillIncluded: inBox.original_bill_included ?? inBox.originalBillIncluded,
+      warrantyApplicable: inBox.warranty_applicable ?? inBox.warrantyApplicable ?? false,
     },
     keyFeatures: apiProduct.keyFeatures || [],
     inspectionPassed: [],

@@ -60,9 +60,9 @@ export const AdminDashboard: React.FC = () => {
     storage: '128GB' as string,
     colour: 'Midnight Black',
     colorHex: '#1e293b',
-    condition: 'Like New (Flawless)' as ConditionGrade,
-    conditionDescription: 'Original display with TrueTone active. 100% verified authentic.',
-    batteryHealth: 90,
+    condition: 'A+' as ConditionGrade,
+    conditionDescription: "DON'T COMPARE WITH FAKE BOX OR KIT UNITS ! ASLI ASLI HI HOTA HAI",
+    batteryHealth: '' as string | number,
     price: 35000,
     originalMsp: '' as string | number, // Optional
     billAvailable: true,
@@ -83,6 +83,8 @@ export const AdminDashboard: React.FC = () => {
     screenSize: '',
     ram: '',
     processor: '',
+    customBrand: '',
+    warrantyApplicable: false,
   });
 
   const [notification, setNotification] = useState<string | null>(null);
@@ -142,9 +144,9 @@ export const AdminDashboard: React.FC = () => {
       storage: '128GB',
       colour: 'Midnight Black',
       colorHex: '#1e293b',
-      condition: 'Like New (Flawless)',
-      conditionDescription: 'Original display with TrueTone verified. Clean housing and pristine chassis.',
-      batteryHealth: 90,
+      condition: 'A+',
+      conditionDescription: "DON'T COMPARE WITH FAKE BOX OR KIT UNITS ! ASLI ASLI HI HOTA HAI",
+      batteryHealth: '',
       price: 34999,
       originalMsp: '',
       billAvailable: true,
@@ -162,6 +164,8 @@ export const AdminDashboard: React.FC = () => {
       screenSize: '',
       ram: '',
       processor: '',
+      customBrand: '',
+      warrantyApplicable: false,
     });
     setEditingPhone(null);
     setShowAddModal(true);
@@ -171,14 +175,15 @@ export const AdminDashboard: React.FC = () => {
     setEditingPhone(phone);
     setFormData({
       category: phone.category || 'Phones',
-      brand: phone.brand,
+      brand: ['Apple', 'Samsung', 'OnePlus', 'Google', 'Nothing', 'Dell', 'Lenovo', 'DJI', 'Xiaomi'].includes(phone.brand) ? phone.brand : 'Other',
+      customBrand: ['Apple', 'Samsung', 'OnePlus', 'Google', 'Nothing', 'Dell', 'Lenovo', 'DJI', 'Xiaomi'].includes(phone.brand) ? '' : phone.brand,
       model: phone.model,
       storage: phone.storage,
       colour: phone.colour,
       colorHex: phone.colorHex || '#3b82f6',
       condition: phone.condition,
       conditionDescription: phone.conditionDescription,
-      batteryHealth: phone.batteryHealth || 90,
+      batteryHealth: phone.batteryHealth ?? '',
       price: phone.price,
       originalMsp: phone.originalMsp || '',
       billAvailable: phone.billAvailable ?? true,
@@ -199,6 +204,7 @@ export const AdminDashboard: React.FC = () => {
       screenSize: phone.screenSize || '',
       ram: phone.ram || '',
       processor: phone.processor || '',
+      warrantyApplicable: !!phone.inBox.warrantyApplicable,
     });
     setShowAddModal(true);
   };
@@ -216,6 +222,7 @@ export const AdminDashboard: React.FC = () => {
     }
 
     const parsedMsp = formData.originalMsp ? Number(formData.originalMsp) : undefined;
+    const parsedBatteryHealth = formData.batteryHealth === '' ? undefined : Number(formData.batteryHealth);
     const parsedBillAmount = (formData.billAvailable && formData.billAmount) ? Number(formData.billAmount) : undefined;
     const bookingCustomer = formData.status === 'Booked' && (formData.bookingCustomerName || formData.bookingCustomerPhone)
       ? {
@@ -231,14 +238,14 @@ export const AdminDashboard: React.FC = () => {
       const updated: PhoneItem = {
         ...editingPhone,
         category: formData.category,
-        brand: formData.brand,
+        brand: formData.brand === 'Other' ? formData.customBrand.trim() : formData.brand,
         model: formData.model,
         storage: formData.storage,
         colour: formData.colour,
         colorHex: formData.colorHex,
         condition: formData.condition,
         conditionDescription: formData.conditionDescription,
-        batteryHealth: Number(formData.batteryHealth),
+        batteryHealth: parsedBatteryHealth,
         price: Number(formData.price),
         originalMsp: parsedMsp,
         billAvailable: formData.billAvailable,
@@ -258,6 +265,7 @@ export const AdminDashboard: React.FC = () => {
           taxInvoiceProvided: formData.taxInvoiceProvided,
           cableIncluded: formData.cableIncluded,
           originalBillIncluded: formData.billAvailable
+          , warrantyApplicable: formData.warrantyApplicable
         }
       };
       await updatePhone(updated);
@@ -265,14 +273,14 @@ export const AdminDashboard: React.FC = () => {
     } else {
       await addPhone({
         category: formData.category,
-        brand: formData.brand,
+        brand: formData.brand === 'Other' ? formData.customBrand.trim() : formData.brand,
         model: formData.model,
         storage: formData.storage,
         colour: formData.colour,
         colorHex: formData.colorHex,
         condition: formData.condition,
         conditionDescription: formData.conditionDescription,
-        batteryHealth: Number(formData.batteryHealth),
+        batteryHealth: parsedBatteryHealth,
         price: Number(formData.price),
         originalMsp: parsedMsp,
         billAvailable: formData.billAvailable,
@@ -294,6 +302,7 @@ export const AdminDashboard: React.FC = () => {
           taxInvoiceProvided: formData.taxInvoiceProvided,
           cableIncluded: formData.cableIncluded,
           originalBillIncluded: formData.billAvailable
+          , warrantyApplicable: formData.warrantyApplicable
         },
         keyFeatures: [
           "100% Genuine factory certified stock",
@@ -752,6 +761,16 @@ export const AdminDashboard: React.FC = () => {
                       <option value="Xiaomi">Xiaomi</option>
                       <option value="Other">Other Brand</option>
                     </select>
+                    {formData.brand === 'Other' && (
+                      <input
+                        type="text"
+                        required
+                        placeholder="Enter brand name"
+                        value={formData.customBrand}
+                        onChange={e => setFormData({ ...formData, customBrand: e.target.value })}
+                        className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-medium"
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -781,8 +800,8 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Storage & Colour & Battery */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Storage, RAM, Colour & Battery */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div className="space-y-1.5">
                     <label className="font-bold text-slate-700">Storage</label>
                     <select
@@ -812,15 +831,28 @@ export const AdminDashboard: React.FC = () => {
                   </div>
 
                   <div className="space-y-1.5">
+                    <label className="font-bold text-slate-700">RAM</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 8GB / 16GB"
+                      value={formData.ram}
+                      onChange={e => setFormData({ ...formData, ram: e.target.value })}
+                      className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
                     <label className="font-bold text-slate-700">Battery Health (%)</label>
                     <input
                       type="number"
                       min="50"
                       max="100"
+                      placeholder="Optional"
                       value={formData.batteryHealth}
-                      onChange={e => setFormData({ ...formData, batteryHealth: Number(e.target.value) })}
+                      onChange={e => setFormData({ ...formData, batteryHealth: e.target.value })}
                       className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-emerald-700 font-bold"
                     />
+                    <p className="text-[10px] text-slate-400">Leave blank if not applicable</p>
                   </div>
                 </div>
 
@@ -958,10 +990,10 @@ export const AdminDashboard: React.FC = () => {
                           onChange={e => setFormData({ ...formData, condition: e.target.value as any })}
                           className="w-full p-2.5 rounded-xl bg-white border border-blue-200 text-slate-900"
                         >
-                          <option value="Like New (Flawless)">Like New (Flawless)</option>
-                          <option value="Excellent (9.5/10)">Excellent (9.5/10)</option>
-                          <option value="Very Good (8.5/10)">Very Good (8.5/10)</option>
-                          <option value="Good (Minor Marks)">Good (Minor Marks)</option>
+                          <option value="A+">A+ - Like New</option>
+                          <option value="A">A - Excellent</option>
+                          <option value="B">B - Very Good</option>
+                          <option value="C">C - Good</option>
                         </select>
                       </div>
                     </div>
@@ -1004,6 +1036,17 @@ export const AdminDashboard: React.FC = () => {
                     className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900"
                   />
                 </div>
+
+                <label className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 cursor-pointer font-bold text-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={formData.warrantyApplicable}
+                    onChange={e => setFormData({ ...formData, warrantyApplicable: e.target.checked })}
+                    className="accent-emerald-600 w-4 h-4"
+                  />
+                  <span>Warranty applicable</span>
+                  <span className="text-[10px] text-emerald-700 font-normal">Show on product details</span>
+                </label>
 
                 {/* In Box items */}
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2 border-t border-slate-100">
