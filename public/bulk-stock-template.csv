@@ -1,0 +1,6 @@
+Category,Brand,Model,Storage,Colour,RAM,Processor,Condition,ConditionDescription,BatteryHealth,Price,OriginalMsp,BillAvailable,BillAmount,WarrantyApplicable,OriginalBox,ChargerIncluded,CableIncluded,Featured,PriceDrop,StockTag,ImageUrl,AdditionalImageUrl
+Phones,Apple,Example iPhone 15,128GB,Black,,,A+,DON'T COMPARE WITH FAKE BOX OR KIT UNITS ! ASLI ASLI HI HOTA HAI,,42999,,false,,false,true,true,true,false,false,CK-EXAMPLE-001,https://example.com/phone.jpg,https://example.com/details.jpg
+Phones,Samsung,Example Galaxy S25,256GB,Black,12GB,,A+,DON'T COMPARE WITH FAKE BOX OR KIT UNITS ! ASLI ASLI HI HOTA HAI,90,59999,,true,,true,true,true,true,false,false,CK-EXAMPLE-002,https://example.com/phone.jpg,https://example.com/details.jpg
+Phones,,,,,,,,,,,,,,,,,,,,,,,
+Phones,,,,,,,,,,,,,,,,,,,,,,,
+Phones,,,,,,,,,,,,,,,,,,,,,,,

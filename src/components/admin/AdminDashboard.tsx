@@ -366,7 +366,7 @@ export const AdminDashboard: React.FC = () => {
 
   const downloadBulkTemplate = () => {
     const link = document.createElement('a');
-    link.href = '/assets/bulk-stock-template.csv';
+    link.href = '/bulk-stock-template.csv';
     link.download = 'cortek-bulk-stock-template.csv';
     link.click();
   };
