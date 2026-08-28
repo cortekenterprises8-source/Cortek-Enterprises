@@ -88,6 +88,12 @@ export const AdminDashboard: React.FC = () => {
   });
 
   const [notification, setNotification] = useState<string | null>(null);
+  const normalizeCondition = (condition: ConditionGrade): ConditionGrade => ({
+    'Like New (Flawless)': 'A+',
+    'Excellent (9.5/10)': 'A',
+    'Very Good (8.5/10)': 'B',
+    'Good (Minor Marks)': 'C',
+  }[condition] || condition) as ConditionGrade;
 
   const showToast = (msg: string) => {
     setNotification(msg);
@@ -181,7 +187,7 @@ export const AdminDashboard: React.FC = () => {
       storage: phone.storage,
       colour: phone.colour,
       colorHex: phone.colorHex || '#3b82f6',
-      condition: phone.condition,
+      condition: normalizeCondition(phone.condition),
       conditionDescription: phone.conditionDescription,
       batteryHealth: phone.batteryHealth ?? '',
       price: phone.price,
@@ -409,15 +415,6 @@ export const AdminDashboard: React.FC = () => {
               Sign Out
             </button>
 
-            <button
-              onClick={() => {
-                setActiveView('stock');
-              }}
-              className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Eye className="w-4 h-4 text-slate-600" />
-              <span>Storefront</span>
-            </button>
           </div>
 
         </div>
@@ -856,6 +853,20 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
 
+                <div className="space-y-1.5">
+                  <label className="font-bold text-slate-700">Condition Grade</label>
+                  <select
+                    value={formData.condition}
+                    onChange={e => setFormData({ ...formData, condition: e.target.value as ConditionGrade })}
+                    className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900"
+                  >
+                    <option value="A+">A+ - Like New</option>
+                    <option value="A">A - Excellent</option>
+                    <option value="B">B - Very Good</option>
+                    <option value="C">C - Good</option>
+                  </select>
+                </div>
+
                 {/* Price, Optional MRP & Status */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1.5">
@@ -982,19 +993,6 @@ export const AdminDashboard: React.FC = () => {
                           onChange={e => setFormData({ ...formData, billAmount: e.target.value })}
                           className="w-full p-2.5 rounded-xl bg-white border border-blue-200 text-slate-900 font-semibold"
                         />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="font-bold text-slate-700">Condition Grade</label>
-                        <select
-                          value={formData.condition}
-                          onChange={e => setFormData({ ...formData, condition: e.target.value as any })}
-                          className="w-full p-2.5 rounded-xl bg-white border border-blue-200 text-slate-900"
-                        >
-                          <option value="A+">A+ - Like New</option>
-                          <option value="A">A - Excellent</option>
-                          <option value="B">B - Very Good</option>
-                          <option value="C">C - Good</option>
-                        </select>
                       </div>
                     </div>
                   )}

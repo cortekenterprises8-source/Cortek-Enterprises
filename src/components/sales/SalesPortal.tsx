@@ -89,6 +89,12 @@ export const SalesPortal: React.FC = () => {
   });
 
   const [notification, setNotification] = useState<string | null>(null);
+  const normalizeCondition = (condition: ConditionGrade): ConditionGrade => ({
+    'Like New (Flawless)': 'A+',
+    'Excellent (9.5/10)': 'A',
+    'Very Good (8.5/10)': 'B',
+    'Good (Minor Marks)': 'C',
+  }[condition] || condition) as ConditionGrade;
 
   const showToast = (msg: string) => {
     setNotification(msg);
@@ -174,7 +180,7 @@ export const SalesPortal: React.FC = () => {
       storage: item.storage,
       colour: item.colour,
       colorHex: item.colorHex || '#3b82f6',
-      condition: item.condition,
+      condition: normalizeCondition(item.condition),
       conditionDescription: item.conditionDescription,
       batteryHealth: item.batteryHealth ?? '',
       price: item.price,
@@ -892,6 +898,20 @@ export const SalesPortal: React.FC = () => {
                   </div>
                 </div>
 
+                <div className="space-y-1.5">
+                  <label className="font-bold text-slate-700">Condition Grade</label>
+                  <select
+                    value={formData.condition}
+                    onChange={e => setFormData({ ...formData, condition: e.target.value as ConditionGrade })}
+                    className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900"
+                  >
+                    <option value="A+">A+ - Like New</option>
+                    <option value="A">A - Excellent</option>
+                    <option value="B">B - Very Good</option>
+                    <option value="C">C - Good</option>
+                  </select>
+                </div>
+
                 {/* Price, Optional MRP & Status */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1.5">
@@ -977,19 +997,6 @@ export const SalesPortal: React.FC = () => {
                           onChange={e => setFormData({ ...formData, billAmount: e.target.value })}
                           className="w-full p-2.5 rounded-xl bg-white border border-blue-200 text-slate-900 font-semibold"
                         />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="font-bold text-slate-700">Condition Grade</label>
-                        <select
-                          value={formData.condition}
-                          onChange={e => setFormData({ ...formData, condition: e.target.value as any })}
-                          className="w-full p-2.5 rounded-xl bg-white border border-blue-200 text-slate-900"
-                        >
-                          <option value="A+">A+ - Like New</option>
-                          <option value="A">A - Excellent</option>
-                          <option value="B">B - Very Good</option>
-                          <option value="C">C - Good</option>
-                        </select>
                       </div>
                     </div>
                   )}

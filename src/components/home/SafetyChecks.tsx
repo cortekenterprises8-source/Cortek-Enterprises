@@ -24,20 +24,6 @@ export const SafetyChecks: React.FC = () => {
     <div className="min-h-screen bg-slate-50 text-slate-900 py-8 px-4 sm:px-6 space-y-12">
       <div className="max-w-7xl mx-auto space-y-12">
         
-        {/* Header */}
-        <div className="relative overflow-hidden text-center max-w-5xl mx-auto space-y-4 px-5 py-10 sm:py-14 rounded-[2rem] bg-slate-950 text-white shadow-xl">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.28),_transparent_48%),radial-gradient(circle_at_bottom_left,_rgba(37,99,235,0.22),_transparent_42%)]" />
-          <div className="relative">
-          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
-            Safety Checks & Buyer Protection
-          </h1>
-
-          <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl mx-auto">
-            Practical inspection steps and verification methods to protect yourself when buying any pre-owned device — whether from Cortek or elsewhere in Karol Bagh.
-          </p>
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-5xl mx-auto">
           {[
             { icon: ScanLine, label: 'Inspect live', detail: 'See the checks happen in front of you', color: 'text-blue-700 bg-blue-50 border-blue-100' },

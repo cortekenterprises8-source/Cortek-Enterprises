@@ -104,14 +104,8 @@ export const PhoneCard: React.FC<PhoneCardProps> = ({ phone, onSelect }) => {
             </span>
           </div>
 
-          {/* Stock ID & Verified Badge Bottom of image */}
-          <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between pointer-events-none">
-            {phone.stockTag ? (
-              <span className="text-[10px] font-mono text-white bg-slate-950/85 px-2 py-0.5 rounded-md border border-slate-700/60 backdrop-blur-sm">
-                ID: {phone.stockTag}
-              </span>
-            ) : <span />}
-
+          {/* Verified badge bottom of image */}
+          <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-end pointer-events-none">
             <span className="text-[10px] font-bold text-emerald-300 bg-slate-950/85 px-2 py-0.5 rounded-md border border-emerald-500/40 backdrop-blur-sm flex items-center gap-1">
               <ShieldCheck className="w-3 h-3 text-emerald-400" />
               100% Genuine Used
